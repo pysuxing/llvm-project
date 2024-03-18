@@ -74,7 +74,12 @@ enum class FloatModeKind {
   Double = 1 << 2,
   LongDouble = 1 << 3,
   Float128 = 1 << 4,
-  Ibm128 = 1 << 5,
+  posit16 = 1 << 5,
+  posit32 = 1 << 6,
+  posit64 = 1 << 7,
+  posit16_1 = 1 << 8,
+  posit32_3 = 1 << 9,
+  Ibm128 = 1 << 10,
   LLVM_MARK_AS_BITMASK_ENUM(Ibm128)
 };
 
@@ -90,6 +95,11 @@ struct TransferrableTargetInfo {
   unsigned char FloatWidth, FloatAlign;
   unsigned char DoubleWidth, DoubleAlign;
   unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align, Ibm128Align;
+  unsigned char Posit16With, Posit16Align;
+  unsigned char Posit32With, Posit32Align;
+  unsigned char Posit64With, Posit64Align;
+  unsigned char Posit16_1With, Posit16_1Align;
+  unsigned char Posit32_3With, Posit32_3Align;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
@@ -130,7 +140,8 @@ struct TransferrableTargetInfo {
   unsigned MaxTLSAlign;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
-      *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format;
+      *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format,
+      *Posit16Format, *Posit32Format, *Posit64Format, *Posit16_1Format, *Posit32_3Format;
 
   ///===---- Target Data Type Query Methods -------------------------------===//
   enum IntType {
@@ -228,6 +239,7 @@ protected:
   bool HasFullBFloat16; // True if the backend supports native bfloat16
                         // arithmetic. Used to determine excess precision
                         // support in the frontend.
+  bool HasPosit;
   bool HasIbm128;
   bool HasLongDouble;
   bool HasFPReturn;
@@ -681,6 +693,7 @@ public:
 
   /// Determine whether the __ibm128 type is supported on this target.
   virtual bool hasIbm128Type() const { return HasIbm128; }
+  virtual bool hasPositType() const { return HasPosit; }
 
   /// Determine whether the long double type is supported on this target.
   virtual bool hasLongDoubleType() const { return HasLongDouble; }
@@ -774,6 +787,22 @@ public:
   unsigned getIbm128Width() const { return 128; }
   unsigned getIbm128Align() const { return Ibm128Align; }
   const llvm::fltSemantics &getIbm128Format() const { return *Ibm128Format; }
+
+  unsigned getPosit16Width() const { return Posit16With; }
+  unsigned getPosit16Align() const { return Posit16Align; }
+  const llvm::fltSemantics &getPosit16Format() const { return *Posit16Format; }
+  unsigned getPosit32Width() const { return Posit32With; }
+  unsigned getPosit32Align() const { return Posit32Align; }
+  const llvm::fltSemantics &getPosit32Format() const { return *Posit32Format; }
+  unsigned getPosit64Width() const { return Posit64With; }
+  unsigned getPosit64Align() const { return Posit64Align; }
+  const llvm::fltSemantics &getPosit64Format() const { return *Posit64Format; }
+  unsigned getPosit16_1Width() const { return Posit16_1With; }
+  unsigned getPosit16_1Align() const { return Posit16_1Align; }
+  const llvm::fltSemantics &getPosit16_1Format() const { return *Posit16_1Format; }
+  unsigned getPosit32_3Width() const { return Posit32_3With; }
+  unsigned getPosit32_3Align() const { return Posit32_3Align; }
+  const llvm::fltSemantics &getPosit32_3Format() const { return *Posit32_3Format; }
 
   /// Return the mangled code of long double.
   virtual const char *getLongDoubleMangling() const { return "e"; }

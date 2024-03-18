@@ -820,6 +820,11 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   // PPC_FP128TyID and FP128TyID have different data contents, but the
   // same size and alignment, so they look the same here.
   case Type::PPC_FP128TyID:
+  case Type::Posit16TyID:
+  case Type::Posit32TyID:
+  case Type::Posit64TyID:
+  case Type::Posit16_1TyID:
+  case Type::Posit32_3TyID:
   case Type::FP128TyID:
   case Type::X86_FP80TyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getFixedValue();

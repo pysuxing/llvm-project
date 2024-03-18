@@ -61,6 +61,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   HasLegalHalfType = false;
   HalfArgsAndReturns = false;
   HasFloat128 = false;
+  HasPosit = false;
   HasIbm128 = false;
   HasFloat16 = false;
   HasBFloat16 = false;
@@ -117,6 +118,16 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   LongDoubleAlign = 64;
   Float128Align = 128;
   Ibm128Align = 128;
+  Posit16With = 16;
+  Posit16Align = 16;
+  Posit32With = 32;
+  Posit32Align = 32;
+  Posit64With = 64;
+  Posit64Align = 64;
+  Posit16_1With = 16;
+  Posit16_1Align = 16;
+  Posit32_3With = 32;
+  Posit32_3Align = 32;
   LargeArrayMinWidth = 0;
   LargeArrayAlign = 0;
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
@@ -147,6 +158,11 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   LongDoubleFormat = &llvm::APFloat::IEEEdouble();
   Float128Format = &llvm::APFloat::IEEEquad();
   Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
+  Posit16Format = &llvm::APFloat::Posit16();
+  Posit32Format = &llvm::APFloat::Posit32();
+  Posit64Format = &llvm::APFloat::Posit64();
+  Posit16_1Format = &llvm::APFloat::Posit16_1();
+  Posit32_3Format = &llvm::APFloat::Posit32_3();
   MCountName = "mcount";
   UserLabelPrefix = "_";
   RegParmMax = 0;

@@ -221,6 +221,11 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::f80:     return Type::getX86_FP80Ty(Context);
   case MVT::f128:    return Type::getFP128Ty(Context);
   case MVT::ppcf128: return Type::getPPC_FP128Ty(Context);
+  case MVT::posit16: return Type::getPosit16Ty(Context);
+  case MVT::posit32: return Type::getPosit32Ty(Context);
+  case MVT::posit64: return Type::getPosit64Ty(Context);
+  case MVT::posit16_1: return Type::getPosit16_1Ty(Context);
+  case MVT::posit32_3: return Type::getPosit32_3Ty(Context);
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
   case MVT::aarch64svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
@@ -610,6 +615,11 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   }
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
+  case Type::Posit16TyID:   return MVT(MVT::posit16);
+  case Type::Posit32TyID:   return MVT(MVT::posit32);
+  case Type::Posit64TyID:   return MVT(MVT::posit64);
+  case Type::Posit16_1TyID: return MVT(MVT::posit16_1);
+  case Type::Posit32_3TyID: return MVT(MVT::posit32_3);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
   case Type::PointerTyID:   return MVT(MVT::iPTR);
   case Type::FixedVectorTyID:

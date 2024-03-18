@@ -828,6 +828,11 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("double",    Type::getDoubleTy(Context));
   TYPEKEYWORD("x86_fp80",  Type::getX86_FP80Ty(Context));
   TYPEKEYWORD("fp128",     Type::getFP128Ty(Context));
+  TYPEKEYWORD("posit16",   Type::getPosit16Ty(Context));
+  TYPEKEYWORD("posit32",   Type::getPosit32Ty(Context));
+  TYPEKEYWORD("posit64",   Type::getPosit64Ty(Context));
+  TYPEKEYWORD("posit16_1", Type::getPosit16_1Ty(Context));
+  TYPEKEYWORD("posit32_3", Type::getPosit32_3Ty(Context));
   TYPEKEYWORD("ppc_fp128", Type::getPPC_FP128Ty(Context));
   TYPEKEYWORD("label",     Type::getLabelTy(Context));
   TYPEKEYWORD("metadata",  Type::getMetadataTy(Context));

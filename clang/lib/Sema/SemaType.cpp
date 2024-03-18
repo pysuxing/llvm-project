@@ -1567,6 +1567,31 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         << "__float128";
     Result = Context.Float128Ty;
     break;
+  case DeclSpec::TST_posit16:
+    if (!S.Context.getTargetInfo().hasPositType())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__posit16";
+    Result = Context.Posit16Ty;
+    break;
+  case DeclSpec::TST_posit32:
+    if (!S.Context.getTargetInfo().hasPositType())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__posit32";
+    Result = Context.Posit32Ty;
+    break;
+  case DeclSpec::TST_posit64:
+    if (!S.Context.getTargetInfo().hasPositType())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__posit64";
+    Result = Context.Posit64Ty;
+    break;
+  case DeclSpec::TST_posit16_1:
+    if (!S.Context.getTargetInfo().hasPositType())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__posit16_1";
+    Result = Context.Posit16_1Ty;
+    break;
+  case DeclSpec::TST_posit32_3:
+    if (!S.Context.getTargetInfo().hasPositType())
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__posit32_3";
+    Result = Context.Posit32_3Ty;
+    break;
   case DeclSpec::TST_ibm128:
     if (!S.Context.getTargetInfo().hasIbm128Type() &&
         !S.getLangOpts().SYCLIsDevice &&

@@ -566,6 +566,11 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::X86_FP80TyID:  OS << "x86_fp80"; return;
   case Type::FP128TyID:     OS << "fp128"; return;
   case Type::PPC_FP128TyID: OS << "ppc_fp128"; return;
+  case Type::Posit16TyID:   OS << "posit16"; return;
+  case Type::Posit32TyID:   OS << "posit32"; return;
+  case Type::Posit64TyID:   OS << "posit64"; return;
+  case Type::Posit16_1TyID: OS << "posit16_1"; return;
+  case Type::Posit32_3TyID: OS << "posit32_3"; return;
   case Type::LabelTyID:     OS << "label"; return;
   case Type::MetadataTyID:  OS << "metadata"; return;
   case Type::X86_MMXTyID:   OS << "x86_mmx"; return;
@@ -1502,6 +1507,20 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
   } else if (&APF.getSemantics() == &APFloat::BFloat()) {
     Out << 'R';
     Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::Posit16() or
+             &APF.getSemantics() == &APFloat::Posit16_1()) {
+    Out << 'P';
+    Out << format_hex_no_prefix(API.getZExtValue(), 4,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::Posit32() or
+             &APF.getSemantics() == &APFloat::Posit32_3()) {
+    Out << 'Q';
+    Out << format_hex_no_prefix(API.getZExtValue(), 8,
+                                /*Upper=*/true);
+  } else if (&APF.getSemantics() == &APFloat::Posit64()) {
+    Out << 'S';
+    Out << format_hex_no_prefix(API.getZExtValue(), 16,
                                 /*Upper=*/true);
   } else
     llvm_unreachable("Unsupported floating point type");

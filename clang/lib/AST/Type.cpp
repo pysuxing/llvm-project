@@ -3311,6 +3311,16 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "_Float16";
   case Float128:
     return "__float128";
+  case Posit16:
+    return "__posit16";
+  case Posit32:
+    return "__posit32";
+  case Posit64:
+    return "__posit64";
+  case Posit16_1:
+    return "__posit16_1";
+  case Posit32_3:
+    return "__posit32_3";
   case Ibm128:
     return "__ibm128";
   case WChar_S:

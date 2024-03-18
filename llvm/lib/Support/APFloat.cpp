@@ -142,6 +142,11 @@ static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
 static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
 
+static constexpr fltSemantics semPosit16 = {15, -14, 11, 16}; // POSITFIXME
+static constexpr fltSemantics semPosit16_1 = {15, -14, 11, 16};
+static constexpr fltSemantics semPosit32 = {127, -126, 24, 32};
+static constexpr fltSemantics semPosit32_3 = {127, -126, 24, 32};
+static constexpr fltSemantics semPosit64 = {1023, -1022, 53, 64};
 /* The IBM double-double semantics. Such a number consists of a pair of IEEE
    64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
    (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
@@ -194,6 +199,16 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return IEEEquad();
   case S_PPCDoubleDouble:
     return PPCDoubleDouble();
+  case S_Posit16:
+    return Posit16();
+  case S_Posit32:
+    return Posit32();
+  case S_Posit64:
+    return Posit64();
+  case S_Posit16_1:
+    return Posit16_1();
+  case S_Posit32_3:
+    return Posit32_3();
   case S_Float8E5M2:
     return Float8E5M2();
   case S_Float8E5M2FNUZ:
@@ -226,6 +241,16 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_IEEEquad;
   else if (&Sem == &llvm::APFloat::PPCDoubleDouble())
     return S_PPCDoubleDouble;
+  else if (&Sem == &llvm::APFloat::Posit16())
+    return S_Posit16;
+  else if (&Sem == &llvm::APFloat::Posit32())
+    return S_Posit32;
+  else if (&Sem == &llvm::APFloat::Posit64())
+    return S_Posit64;
+  else if (&Sem == &llvm::APFloat::Posit16_1())
+    return S_Posit16_1;
+  else if (&Sem == &llvm::APFloat::Posit32_3())
+    return S_Posit32_3;
   else if (&Sem == &llvm::APFloat::Float8E5M2())
     return S_Float8E5M2;
   else if (&Sem == &llvm::APFloat::Float8E5M2FNUZ())
@@ -252,6 +277,11 @@ const fltSemantics &APFloatBase::IEEEquad() { return semIEEEquad; }
 const fltSemantics &APFloatBase::PPCDoubleDouble() {
   return semPPCDoubleDouble;
 }
+const fltSemantics &APFloatBase::Posit16() { return semPosit16; }
+const fltSemantics &APFloatBase::Posit32() { return semPosit32; }
+const fltSemantics &APFloatBase::Posit64() { return semPosit64; }
+const fltSemantics &APFloatBase::Posit16_1() { return semPosit16_1; }
+const fltSemantics &APFloatBase::Posit32_3() { return semPosit32_3; }
 const fltSemantics &APFloatBase::Float8E5M2() { return semFloat8E5M2; }
 const fltSemantics &APFloatBase::Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
 const fltSemantics &APFloatBase::Float8E4M3FN() { return semFloat8E4M3FN; }

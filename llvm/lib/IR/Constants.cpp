@@ -378,6 +378,11 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::X86_FP80TyID:
   case Type::FP128TyID:
   case Type::PPC_FP128TyID:
+  case Type::Posit16TyID:
+  case Type::Posit32TyID:
+  case Type::Posit64TyID:
+  case Type::Posit16_1TyID:
+  case Type::Posit32_3TyID:
     return ConstantFP::get(Ty->getContext(),
                            APFloat::getZero(Ty->getFltSemantics()));
   case Type::PointerTyID:
@@ -1633,6 +1638,36 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {
         &Val2.getSemantics() == &APFloat::IEEEdouble())
       return true;
     Val2.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven, &losesInfo);
+    return !losesInfo;
+  }
+  case Type::Posit16TyID: {
+    if (&Val2.getSemantics() == &APFloat::Posit16())
+      return true;
+    Val2.convert(APFloat::Posit16(), APFloat::rmNearestTiesToEven, &losesInfo);
+    return !losesInfo;
+  }
+  case Type::Posit32TyID: {
+    if (&Val2.getSemantics() == &APFloat::Posit32())
+      return true;
+    Val2.convert(APFloat::Posit32(), APFloat::rmNearestTiesToEven, &losesInfo);
+    return !losesInfo;
+  }
+  case Type::Posit64TyID: {
+    if (&Val2.getSemantics() == &APFloat::Posit64())
+      return true;
+    Val2.convert(APFloat::Posit64(), APFloat::rmNearestTiesToEven, &losesInfo);
+    return !losesInfo;
+  }
+  case Type::Posit16_1TyID: {
+    if (&Val2.getSemantics() == &APFloat::Posit16_1())
+      return true;
+    Val2.convert(APFloat::Posit16_1(), APFloat::rmNearestTiesToEven, &losesInfo);
+    return !losesInfo;
+  }
+  case Type::Posit32_3TyID: {
+    if (&Val2.getSemantics() == &APFloat::Posit32_3())
+      return true;
+    Val2.convert(APFloat::Posit32_3(), APFloat::rmNearestTiesToEven, &losesInfo);
     return !losesInfo;
   }
   case Type::X86_FP80TyID:

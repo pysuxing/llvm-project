@@ -152,6 +152,11 @@ typedef enum {
   LLVMDoubleTypeKind,    /**< 64 bit floating point type */
   LLVMX86_FP80TypeKind,  /**< 80 bit floating point type (X87) */
   LLVMFP128TypeKind,     /**< 128 bit floating point type (112-bit mantissa)*/
+  LLVMPosit16TypeKind,   /**< Posit 16 */
+  LLVMPosit32TypeKind,   /**< Posit 32 */
+  LLVMPosit64TypeKind,   /**< Posit 64 */
+  LLVMPosit16_1TypeKind, /**< Posit 16(1) */
+  LLVMPosit32_3TypeKind, /**< Posit 32(3) */
   LLVMPPC_FP128TypeKind, /**< 128 bit floating point type (two 64-bits) */
   LLVMLabelTypeKind,     /**< Labels */
   LLVMIntegerTypeKind,   /**< Arbitrary bit width integers */

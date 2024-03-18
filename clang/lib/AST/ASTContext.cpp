@@ -106,8 +106,13 @@ enum FloatingRank {
   BFloat16Rank,
   Float16Rank,
   HalfRank,
+  Posit16Rank,
+  Posit16_1Rank,
   FloatRank,
+  Posit32Rank,
+  Posit32_3Rank,
   DoubleRank,
+  Posit64Rank,
   LongDoubleRank,
   Float128Rank,
   Ibm128Rank
@@ -1229,6 +1234,11 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // GNU extension, __float128 for IEEE quadruple precision
   InitBuiltinType(Float128Ty,          BuiltinType::Float128);
 
+  InitBuiltinType(Posit16Ty, BuiltinType::Posit16);
+  InitBuiltinType(Posit32Ty, BuiltinType::Posit32);
+  InitBuiltinType(Posit64Ty, BuiltinType::Posit64);
+  InitBuiltinType(Posit16_1Ty, BuiltinType::Posit16_1);
+  InitBuiltinType(Posit32_3Ty, BuiltinType::Posit32_3);
   // __ibm128 for IBM extended precision
   InitBuiltinType(Ibm128Ty, BuiltinType::Ibm128);
 
@@ -1623,6 +1633,11 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
       return Target->getHalfFormat();
   case BuiltinType::Float:      return Target->getFloatFormat();
   case BuiltinType::Double:     return Target->getDoubleFormat();
+  case BuiltinType::Posit16:     return Target->getPosit16Format();
+  case BuiltinType::Posit32:     return Target->getPosit32Format();
+  case BuiltinType::Posit64:     return Target->getPosit64Format();
+  case BuiltinType::Posit16_1:     return Target->getPosit16_1Format();
+  case BuiltinType::Posit32_3:     return Target->getPosit32_3Format();
   case BuiltinType::Ibm128:
     return Target->getIbm128Format();
   case BuiltinType::LongDouble:
@@ -2093,6 +2108,20 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
         Width = AuxTarget->getHalfWidth();
         Align = AuxTarget->getHalfAlign();
       }
+      break;
+    case BuiltinType::Posit16:
+    case BuiltinType::Posit16_1:
+      Width = Target->getPosit16Width();
+      Align = Target->getPosit16Align();
+      break;
+    case BuiltinType::Posit32:
+    case BuiltinType::Posit32_3:
+      Width = Target->getPosit32Width();
+      Align = Target->getPosit32Align();
+      break;
+    case BuiltinType::Posit64:
+      Width = Target->getPosit64Width();
+      Align = Target->getPosit64Align();
       break;
     case BuiltinType::Float:
       Width = Target->getFloatWidth();
@@ -7059,6 +7088,11 @@ static FloatingRank getFloatingRank(QualType T) {
   case BuiltinType::LongDouble: return LongDoubleRank;
   case BuiltinType::Float128:   return Float128Rank;
   case BuiltinType::BFloat16:   return BFloat16Rank;
+  case BuiltinType::Posit16:     return Posit16Rank;
+  case BuiltinType::Posit32:     return Posit32Rank;
+  case BuiltinType::Posit64:     return Posit64Rank;
+  case BuiltinType::Posit16_1:     return Posit16_1Rank;
+  case BuiltinType::Posit32_3:     return Posit32_3Rank;
   case BuiltinType::Ibm128:     return Ibm128Rank;
   }
 }
@@ -8052,6 +8086,11 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::BFloat16:
     case BuiltinType::Float16:
     case BuiltinType::Float128:
+    case BuiltinType::Posit16:
+    case BuiltinType::Posit32:
+    case BuiltinType::Posit64:
+    case BuiltinType::Posit16_1:
+    case BuiltinType::Posit32_3:
     case BuiltinType::Ibm128:
     case BuiltinType::Half:
     case BuiltinType::ShortAccum:
@@ -12169,6 +12208,16 @@ QualType ASTContext::getRealTypeForBitwidth(unsigned DestWidth,
     return LongDoubleTy;
   case FloatModeKind::Float128:
     return Float128Ty;
+  case FloatModeKind::posit16:
+    return Posit16Ty;
+  case FloatModeKind::posit32:
+    return Posit32Ty;
+  case FloatModeKind::posit64:
+    return Posit64Ty;
+  case FloatModeKind::posit16_1:
+    return Posit16_1Ty;
+  case FloatModeKind::posit32_3:
+    return Posit32_3Ty;
   case FloatModeKind::Ibm128:
     return Ibm128Ty;
   case FloatModeKind::NoFloat:

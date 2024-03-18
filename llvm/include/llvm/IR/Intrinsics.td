@@ -319,6 +319,11 @@ def IIT_FUNCREF : IIT_VT<funcref, 55>;
 def IIT_I2 : IIT_Int<2, 57>;
 def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
+def IIT_POSIT16 : IIT_VT<posit16, 60>;
+def IIT_POSIT32 : IIT_VT<posit32, 61>;
+def IIT_POSIT64 : IIT_VT<posit64, 62>;
+def IIT_POSIT16_1 : IIT_VT<posit16_1, 63>;
+def IIT_POSIT32_3 : IIT_VT<posit32_3, 64>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -488,6 +493,11 @@ def llvm_double_ty     : LLVMType<f64>;
 def llvm_f80_ty        : LLVMType<f80>;
 def llvm_f128_ty       : LLVMType<f128>;
 def llvm_ppcf128_ty    : LLVMType<ppcf128>;
+def llvm_posit16_ty    : LLVMType<posit16>;
+def llvm_posit32_ty    : LLVMType<posit32>;
+def llvm_posit64_ty    : LLVMType<posit64>;
+def llvm_posit16_1_ty  : LLVMType<posit16_1>;
+def llvm_posit32_3_ty  : LLVMType<posit32_3>;
 def llvm_ptr_ty        : LLVMQualPointerType<0>; // ptr
 def llvm_anyptr_ty     : LLVMAnyPointerType;     // ptr addrspace(N)
 def llvm_empty_ty      : LLVMType<OtherVT>;      // { }
@@ -1742,6 +1752,19 @@ def int_pseudoprobe : DefaultAttrsIntrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_
 let IntrProperties = [IntrNoMem, IntrWillReturn] in {
 def int_convert_to_fp16   : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
 def int_convert_from_fp16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
+}
+// Intrinsics to support posit floating point format
+let IntrProperties = [IntrNoMem, IntrWillReturn] in {
+def int_convert_to_posit16     : DefaultAttrsIntrinsic<[llvm_posit16_ty], [llvm_anyfloat_ty]>;
+def int_convert_from_posit16   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_posit16_ty]>;
+def int_convert_to_posit32     : DefaultAttrsIntrinsic<[llvm_posit32_ty], [llvm_anyfloat_ty]>;
+def int_convert_from_posit32   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_posit32_ty]>;
+def int_convert_to_posit64     : DefaultAttrsIntrinsic<[llvm_posit64_ty], [llvm_anyfloat_ty]>;
+def int_convert_from_posit64   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_posit64_ty]>;
+def int_convert_to_posit16_1   : DefaultAttrsIntrinsic<[llvm_posit16_1_ty], [llvm_anyfloat_ty]>;
+def int_convert_from_posit16_1 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_posit16_1_ty]>;
+def int_convert_to_posit32_3   : DefaultAttrsIntrinsic<[llvm_posit32_3_ty], [llvm_anyfloat_ty]>;
+def int_convert_from_posit32_3 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_posit32_3_ty]>;
 }
 
 // Saturating floating point to integer intrinsics

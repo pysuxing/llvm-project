@@ -1268,6 +1268,71 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
     DstElementType = DstType;
   }
 
+  if (DstElementTy->isPositTy()) {
+    assert(SrcElementTy != DstElementTy);
+    if (SrcElementTy->isIntegerTy()) {
+      auto *IntermediateTy = DstElementTy->isPosit64Ty()? Builder.getDoubleTy() : Builder.getFloatTy();
+      Src = SrcElementType->isSignedIntegerOrEnumerationType()
+                ? Builder.CreateSIToFP(Src, IntermediateTy, "conv")
+                : Builder.CreateUIToFP(Src, IntermediateTy, "conv");
+    }
+    if (DstElementTy->isPosit16Ty())
+      return Builder.CreateIntrinsic(DstElementTy,
+                                     llvm::Intrinsic::convert_to_posit16, Src,
+                                     nullptr, "conv");
+    if (DstElementTy->isPosit32Ty())
+      return Builder.CreateIntrinsic(DstElementTy,
+                                     llvm::Intrinsic::convert_to_posit32, Src,
+                                     nullptr, "conv");
+    if (DstElementTy->isPosit64Ty())
+      return Builder.CreateIntrinsic(DstElementTy,
+                                     llvm::Intrinsic::convert_to_posit64, Src,
+                                     nullptr, "conv");
+    if (DstElementTy->isPosit16_1Ty())
+      return Builder.CreateIntrinsic(DstElementTy,
+                                     llvm::Intrinsic::convert_to_posit16_1, Src,
+                                     nullptr, "conv");
+    if (DstElementTy->isPosit32_3Ty())
+      return Builder.CreateIntrinsic(DstElementTy,
+                                     llvm::Intrinsic::convert_to_posit32_3, Src,
+                                     nullptr, "conv");
+  }
+  if (SrcElementTy->isPositTy()) {
+    assert(SrcElementTy != DstElementTy);
+    auto *IntermediateTy = DstElementTy;
+    if (DstElementTy->isIntegerTy()) {
+      IntermediateTy = SrcElementTy->isPosit64Ty() ? Builder.getDoubleTy()
+                                                   : Builder.getFloatTy();
+    }
+    Value *Dst = nullptr;
+    if (SrcElementTy->isPosit16Ty())
+      Dst = Builder.CreateIntrinsic(IntermediateTy,
+                                    llvm::Intrinsic::convert_from_posit16, Src,
+                                    nullptr, "conv");
+    else if (SrcElementTy->isPosit32Ty())
+      Dst = Builder.CreateIntrinsic(IntermediateTy,
+                                    llvm::Intrinsic::convert_from_posit32, Src,
+                                    nullptr, "conv");
+    else if (SrcElementTy->isPosit64Ty())
+      Dst = Builder.CreateIntrinsic(IntermediateTy,
+                                    llvm::Intrinsic::convert_from_posit64, Src,
+                                    nullptr, "conv");
+    else if (SrcElementTy->isPosit16_1Ty())
+      Dst = Builder.CreateIntrinsic(IntermediateTy,
+                                    llvm::Intrinsic::convert_from_posit16_1,
+                                    Src, nullptr, "conv");
+    else if (SrcElementTy->isPosit32_3Ty())
+      Dst = Builder.CreateIntrinsic(IntermediateTy,
+                                    llvm::Intrinsic::convert_from_posit32_3,
+                                    Src, nullptr, "conv");
+    if (DstElementTy->isIntegerTy()) {
+      Dst = DstElementType->isSignedIntegerOrEnumerationType()
+                ? Builder.CreateFPToSI(Dst, DstElementTy, "conv")
+                : Builder.CreateFPToUI(Dst, DstElementTy, "conv");
+    }
+    return Dst;
+  }
+  
   if (isa<llvm::IntegerType>(SrcElementTy)) {
     bool InputSigned = SrcElementType->isSignedIntegerOrEnumerationType();
     if (SrcElementType->isBooleanType() && Opts.TreatBooleanAsSigned) {
@@ -1298,7 +1363,7 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
       return Builder.CreateFPToSI(Src, DstTy, "conv");
     return Builder.CreateFPToUI(Src, DstTy, "conv");
   }
-
+  // POSITFIXME
   if (DstElementTy->getTypeID() < SrcElementTy->getTypeID())
     return Builder.CreateFPTrunc(Src, DstTy, "conv");
   return Builder.CreateFPExt(Src, DstTy, "conv");

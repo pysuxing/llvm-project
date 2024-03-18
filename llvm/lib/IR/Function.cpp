@@ -995,6 +995,11 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     case Type::X86_FP80TyID:  Result += "f80";      break;
     case Type::FP128TyID:     Result += "f128";     break;
     case Type::PPC_FP128TyID: Result += "ppcf128";  break;
+    case Type::Posit16TyID:   Result += "posit16";  break;
+    case Type::Posit32TyID:   Result += "posit32";  break;
+    case Type::Posit64TyID:   Result += "posit64";  break;
+    case Type::Posit16_1TyID: Result += "posit16_1";break;
+    case Type::Posit32_3TyID: Result += "posit32_3";break;
     case Type::X86_MMXTyID:   Result += "x86mmx";   break;
     case Type::X86_AMXTyID:   Result += "x86amx";   break;
     case Type::IntegerTyID:
@@ -1110,6 +1115,21 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_PPCF128:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::PPCQuad, 0));
+    return;
+  case IIT_POSIT16:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Posit16, 0));
+    return;
+  case IIT_POSIT32:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Posit32, 0));
+    return;
+  case IIT_POSIT64:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Posit64, 0));
+    return;
+  case IIT_POSIT16_1:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Posit16_1, 0));
+    return;
+  case IIT_POSIT32_3:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Posit32_3, 0));
     return;
   case IIT_I1:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 1));
@@ -1341,6 +1361,11 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Double: return Type::getDoubleTy(Context);
   case IITDescriptor::Quad: return Type::getFP128Ty(Context);
   case IITDescriptor::PPCQuad: return Type::getPPC_FP128Ty(Context);
+  case IITDescriptor::Posit16: return Type::getPosit16Ty(Context);
+  case IITDescriptor::Posit32: return Type::getPosit32Ty(Context);
+  case IITDescriptor::Posit64: return Type::getPosit64Ty(Context);
+  case IITDescriptor::Posit16_1: return Type::getPosit16_1Ty(Context);
+  case IITDescriptor::Posit32_3: return Type::getPosit32_3Ty(Context);
   case IITDescriptor::AArch64Svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
 
@@ -1500,6 +1525,11 @@ static bool matchIntrinsicType(
     case IITDescriptor::Double: return !Ty->isDoubleTy();
     case IITDescriptor::Quad: return !Ty->isFP128Ty();
     case IITDescriptor::PPCQuad: return !Ty->isPPC_FP128Ty();
+    case IITDescriptor::Posit16: return !Ty->isPosit16Ty();
+    case IITDescriptor::Posit32: return !Ty->isPosit32Ty();
+    case IITDescriptor::Posit64: return !Ty->isPosit64Ty();
+    case IITDescriptor::Posit16_1: return !Ty->isPosit16_1Ty();
+    case IITDescriptor::Posit32_3: return !Ty->isPosit32_3Ty();
     case IITDescriptor::Integer: return !Ty->isIntegerTy(D.Integer_Width);
     case IITDescriptor::AArch64Svcount:
       return !isa<TargetExtType>(Ty) ||

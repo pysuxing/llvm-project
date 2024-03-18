@@ -999,6 +999,11 @@ void ModuleBitcodeWriter::writeTypeTable() {
     case Type::X86_FP80TyID:  Code = bitc::TYPE_CODE_X86_FP80;  break;
     case Type::FP128TyID:     Code = bitc::TYPE_CODE_FP128;     break;
     case Type::PPC_FP128TyID: Code = bitc::TYPE_CODE_PPC_FP128; break;
+    case Type::Posit16TyID:   Code = bitc::TYPE_CODE_POSIT16;   break;
+    case Type::Posit32TyID:   Code = bitc::TYPE_CODE_POSIT32;   break;
+    case Type::Posit64TyID:   Code = bitc::TYPE_CODE_POSIT64;   break;
+    case Type::Posit16_1TyID: Code = bitc::TYPE_CODE_POSIT16_1; break;
+    case Type::Posit32_3TyID: Code = bitc::TYPE_CODE_POSIT32_3; break;
     case Type::LabelTyID:     Code = bitc::TYPE_CODE_LABEL;     break;
     case Type::MetadataTyID:  Code = bitc::TYPE_CODE_METADATA;  break;
     case Type::X86_MMXTyID:   Code = bitc::TYPE_CODE_X86_MMX;   break;

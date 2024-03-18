@@ -565,6 +565,16 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMFP128TypeKind;
   case Type::PPC_FP128TyID:
     return LLVMPPC_FP128TypeKind;
+  case Type::Posit16TyID:
+    return LLVMPosit16TypeKind;
+  case Type::Posit32TyID:
+    return LLVMPosit32TypeKind;
+  case Type::Posit64TyID:
+    return LLVMPosit64TypeKind;
+  case Type::Posit16_1TyID:
+    return LLVMPosit16_1TypeKind;
+  case Type::Posit32_3TyID:
+    return LLVMPosit32_3TypeKind;
   case Type::LabelTyID:
     return LLVMLabelTypeKind;
   case Type::MetadataTyID:

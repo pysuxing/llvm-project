@@ -292,6 +292,11 @@ public:
   static const TST TST_accum = clang::TST_Accum;
   static const TST TST_fract = clang::TST_Fract;
   static const TST TST_float128 = clang::TST_float128;
+  static const TST TST_posit16 = clang::TST_posit16;
+  static const TST TST_posit32 = clang::TST_posit32;
+  static const TST TST_posit64 = clang::TST_posit64;
+  static const TST TST_posit16_1 = clang::TST_posit16_1;
+  static const TST TST_posit32_3 = clang::TST_posit32_3;
   static const TST TST_ibm128 = clang::TST_ibm128;
   static const TST TST_bool = clang::TST_bool;
   static const TST TST_decimal32 = clang::TST_decimal32;
