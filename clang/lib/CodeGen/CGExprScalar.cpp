@@ -1363,7 +1363,6 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
       return Builder.CreateFPToSI(Src, DstTy, "conv");
     return Builder.CreateFPToUI(Src, DstTy, "conv");
   }
-  // POSITFIXME
   if (DstElementTy->getTypeID() < SrcElementTy->getTypeID())
     return Builder.CreateFPTrunc(Src, DstTy, "conv");
   return Builder.CreateFPExt(Src, DstTy, "conv");

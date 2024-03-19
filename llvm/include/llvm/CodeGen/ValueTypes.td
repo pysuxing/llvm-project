@@ -58,7 +58,7 @@ defset list<ValueType> ValueTypes = {
 def OtherVT : ValueType<0,   1> {  // "Other" value
   let LLVMName = "Other";
 }
-// POSITFIXME
+
 def i1      : VTInt<1,   2>;  // One bit boolean value
 def i2      : VTInt<2,   3>;  // 2-bit integer value
 def i4      : VTInt<4,   4>;  // 4-bit integer value
