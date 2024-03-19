@@ -263,6 +263,11 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
       .Case("0xd01", "tsv110")
       .Default("generic");
 
+  if (Implementer == "0x70") // Feiteng
+    return StringSwitch<const char *>(Part)
+      .Case("0x880", "xiangjiang") // POSITFIXME
+      .Default("generic");
+
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
     // values correspond to the "Part number" in the CP15/c0 register. The

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
@@ -99,6 +100,7 @@ AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
     TuneCPUString = CPUString;
 
   ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
+  llvm::dbgs() << "============" << CPUString << ' ' << TuneCPUString << ' ' << FS << '\n';
   initializeProperties(HasMinSize);
 
   return *this;
@@ -278,6 +280,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
+  case XiangJiang:
+    MaxInterleaveFactor = 4;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(16);
+    MaxBytesForLoopAlignment = 8;
+    break;
   case TSV110:
     CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
@@ -326,6 +334,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
+  llvm::dbgs() << "============" << CPU << ' ' << TuneCPU << ' ' << FS << '\n';
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
 

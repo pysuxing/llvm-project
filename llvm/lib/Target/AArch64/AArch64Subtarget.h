@@ -92,6 +92,7 @@ public:
     ThunderXT83,
     ThunderXT88,
     ThunderX3T110,
+    XiangJiang,
     TSV110
   };
 

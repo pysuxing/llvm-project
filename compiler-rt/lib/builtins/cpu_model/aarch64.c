@@ -119,6 +119,7 @@ enum CPUFeatures {
   FEAT_MAX,
   FEAT_EXT = 62, // Reserved to indicate presence of additional features field
                  // in __aarch64_cpu_features
+  FEAT_POSIT,
   FEAT_INIT      // Used as flag of features initialization completion
 };
 

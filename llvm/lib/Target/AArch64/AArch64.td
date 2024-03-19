@@ -158,6 +158,9 @@ def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
 def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
     "true", "Enable BFloat16 Extension (FEAT_BF16)" >;
 
+def FeaturePosit : SubtargetFeature<"posit", "HasPosit",
+    "true", "Enable Posit Extension (FEAT_POSIT)" >;
+
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP">;
 
@@ -1347,6 +1350,12 @@ def TuneTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
                                   FeatureStorePairSuppress,
                                   FeaturePostRAScheduler]>;
 
+def TuneXiangJiang     : SubtargetFeature<"xiangjiang", "ARMProcFamily", "XiangJiang",
+                                          "The XiangJiang processors", [
+                                          FeaturePosit,
+                                          FeatureNEON,
+                                          FeatureBF16]>;
+
 def TuneAmpere1 : SubtargetFeature<"ampere1", "ARMProcFamily", "Ampere1",
                                    "Ampere Computing Ampere-1 processors", [
                                    FeaturePostRAScheduler,
@@ -1541,6 +1550,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> ThunderX3T110 = [HasV8_3aOps, FeatureCRC, FeatureCrypto,
                                           FeatureFPARMv8, FeatureNEON, FeatureLSE,
                                           FeaturePAuth, FeaturePerfMon];
+  list<SubtargetFeature> XiangJiang  = [HasV8_0aOps, FeatureFPARMv8, FeatureNEON,
+                                        FeatureBF16, FeaturePosit];
   list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
@@ -1663,6 +1674,8 @@ def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
                      ProcessorFeatures.ThunderX3T110, [TuneThunderX3T110]>;
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
+def : ProcessorModel<"xiangjiang", CortexA57Model, ProcessorFeatures.XiangJiang,
+                     [TuneXiangJiang]>;
 
 // Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, ProcessorFeatures.AppleA7,

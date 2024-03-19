@@ -194,7 +194,6 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
     this->MCountName =
         Opts.EABIVersion == llvm::EABI::GNU ? "\01_mcount" : "mcount";
-  HasPosit = true; // POSITFIXME
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
@@ -982,6 +981,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasMatMul = true;
     if (Feature == "+bf16")
       HasBFloat16 = true;
+    if (Feature == "+posit")
+      HasPosit = true;
     if (Feature == "+lse")
       HasLSE = true;
     if (Feature == "+ls64")

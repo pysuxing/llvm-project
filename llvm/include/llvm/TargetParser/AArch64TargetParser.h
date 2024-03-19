@@ -97,6 +97,7 @@ enum CPUFeatures {
   FEAT_MOPS,
   FEAT_MAX,
   FEAT_EXT = 62,
+  FEAT_POSIT,
   FEAT_INIT
 };
 
@@ -183,6 +184,7 @@ enum ArchExtKind : unsigned {
   AEK_TLBIW =         74, // FEAT_TLBIW
   AEK_JSCVT =         75, // FEAT_JSCVT
   AEK_FCMA =          76, // FEAT_FCMA
+  AEK_POSIT =         77, // FEAT_POSIT
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -214,6 +216,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"aes", AArch64::AEK_AES, "+aes", "-aes", FEAT_AES, "+fp-armv8,+neon", 150},
     {"b16b16", AArch64::AEK_B16B16, "+b16b16", "-b16b16", FEAT_INIT, "", 0},
     {"bf16", AArch64::AEK_BF16, "+bf16", "-bf16", FEAT_BF16, "+bf16", 280},
+    {"posit", AArch64::AEK_POSIT, "+posit", "-posit", FEAT_POSIT, "+posit", 280},
     {"brbe", AArch64::AEK_BRBE, "+brbe", "-brbe", FEAT_INIT, "", 0},
     {"bti", AArch64::AEK_NONE, {}, {}, FEAT_BTI, "+bti", 510},
     {"crc", AArch64::AEK_CRC, "+crc", "-crc", FEAT_CRC, "+crc", 110},
@@ -781,6 +784,8 @@ inline constexpr CpuInfo CpuInfos[] = {
                                AArch64::AEK_DOTPROD, AArch64::AEK_FP16,
                                AArch64::AEK_FP16FML, AArch64::AEK_PROFILE,
                                AArch64::AEK_JSCVT, AArch64::AEK_FCMA})},
+    {"xiangjiang", ARMV8A,
+     AArch64::ExtensionBitset({AArch64::AEK_POSIT, AArch64::AEK_SIMD, AArch64::AEK_BF16})},
     {"a64fx", ARMV8_2A,
      AArch64::ExtensionBitset({AArch64::AEK_AES, AArch64::AEK_SHA2,
                                AArch64::AEK_FP16, AArch64::AEK_SVE})},
