@@ -455,6 +455,9 @@ enum NodeType : unsigned {
   // chain = MSRR(chain, sysregname, lo64, hi64)
   MSRR,
 
+  // Posit Operations
+  PADD,
+
   // Strict (exception-raising) floating point comparison
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
   STRICT_FCMPE,

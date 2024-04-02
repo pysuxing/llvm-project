@@ -100,7 +100,6 @@ AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
     TuneCPUString = CPUString;
 
   ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
-  llvm::dbgs() << "============" << CPUString << ' ' << TuneCPUString << ' ' << FS << '\n';
   initializeProperties(HasMinSize);
 
   return *this;
@@ -334,7 +333,6 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
-  llvm::dbgs() << "============" << CPU << ' ' << TuneCPU << ' ' << FS << '\n';
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
 

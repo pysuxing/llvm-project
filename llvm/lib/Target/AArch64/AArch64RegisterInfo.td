@@ -451,7 +451,7 @@ def FPR16 : RegisterClass<"AArch64", [f16, bf16, i16], 16, (sequence "H%u", 0, 3
 def FPR16_lo : RegisterClass<"AArch64", [f16], 16, (trunc FPR16, 16)> {
   let Size = 16;
 }
-def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)>;
+def FPR32 : RegisterClass<"AArch64", [f32, i32, posit32], 32,(sequence "S%u", 0, 31)>;
 def FPR64 : RegisterClass<"AArch64", [f64, i64, v2f32, v1f64, v8i8, v4i16, v2i32,
                                       v1i64, v4f16, v4bf16],
                                      64, (sequence "D%u", 0, 31)>;
@@ -460,6 +460,13 @@ def FPR64_lo : RegisterClass<"AArch64",
                               v1f64],
                              64, (trunc FPR64, 16)>;
 
+def PFPR16 : RegisterClass<"AArch64", [posit16, posit16_1], 16, (sequence "H%u", 0, 31)> {
+  let Size = 16;
+}
+
+def PFPR32 : RegisterClass<"AArch64", [posit32, posit32_3], 32,(sequence "S%u", 0, 31)>;
+def PFPR64 : RegisterClass<"AArch64", [posit64],
+                                     64, (sequence "D%u", 0, 31)>;
 // We don't (yet) have an f128 legal type, so don't use that here. We
 // normalize 128-bit vectors to v2f64 for arg passing and such, so use
 // that here.

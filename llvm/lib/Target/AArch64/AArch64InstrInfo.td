@@ -128,6 +128,8 @@ def HasRDM           : Predicate<"Subtarget->hasRDM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRDM), "rdm">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFullFP16), "fullfp16">;
+def HasPosit         : Predicate<"Subtarget->hasPosit()">,
+                                 AssemblerPredicateWithAll<(all_of FeaturePosit), "posit">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP16FML), "fp16fml">;
 def HasSPE           : Predicate<"Subtarget->hasSPE()">,
@@ -809,6 +811,10 @@ def AArch64smaxv    : SDNode<"AArch64ISD::SMAXV", SDT_AArch64UnaryVec>;
 def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 def AArch64uaddlv   : SDNode<"AArch64ISD::UADDLV", SDT_AArch64uaddlp>;
 def AArch64saddlv   : SDNode<"AArch64ISD::SADDLV", SDT_AArch64uaddlp>;
+
+// POSITFIXME we need an SDTCisPosit
+def SDT_AArch64padd : SDTypeProfile<1, 2, [SDTCisFP<0>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
+def AArch64padd     : SDNode<"AArch64ISD::PADD", SDT_AArch64padd, [SDNPCommutative]>;
 
 def AArch64uabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abdu node:$lhs, node:$rhs),
@@ -3094,7 +3100,6 @@ defm : ScalToVecROLoadPat<ro64, load,       i64, v2i64, LDRDroW, LDRDroX, dsub>;
 
 defm : ScalToVecROLoadPat<ro64, load,       f64, v2f64, LDRDroW, LDRDroX, dsub>;
 
-
 def : Pat <(v1i64 (scalar_to_vector (i64
                       (load (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
                                            ro_Wextend64:$extend))))),
@@ -3825,6 +3830,17 @@ defm STRS : Store32RO<0b10,  1, 0b00, FPR32Op,  "str", f32,     store>;
 defm STRD : Store64RO<0b11,  1, 0b00, FPR64Op,  "str", f64,     store>;
 defm STRQ : Store128RO<0b00, 1, 0b10, FPR128Op, "str">;
 }
+
+// let Predicates = [HasPosit], AddedComplexity = 10 in {
+//   def : Pat<(store (posit32 PFPR32:$Rt),
+//                         (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm,
+//                                          ro_Wextend32:$extend)),
+//             (STRSroW PFPR32:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend)>;
+//   def : Pat<(store (posit32 PFPR32:$Rt),
+//                         (ro_Xindexed32 GPR64sp:$Rn, GPR32:$Rm,
+//                                          ro_Xextend32:$extend)),
+//             (STRSroX PFPR32:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro_Xextend32:$extend)>;
+// } 
 
 let Predicates = [UseSTRQro], AddedComplexity = 10 in {
   def : Pat<(store (f128 FPR128:$Rt),
@@ -4737,6 +4753,17 @@ def : Pat<(i64 (any_llrint f32:$Rn)),
 def : Pat<(i64 (any_llrint f64:$Rn)),
           (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
+//===----------------------------------------------------------------------===//
+// Posit two operand instructions.
+//===----------------------------------------------------------------------===//
+defm PFADD   : TwoOperandPositData<0b01001, "padd", AArch64padd>;
+// defm PFSUB   : TwoOperandPositData<0b01010, "psub", any_fsub>;
+// let SchedRW = [WriteFMul] in {
+// defm PFMUL   : TwoOperandPositData<0b01011, "pmul", any_fmul>;
+// }
+// let SchedRW = [WriteFDiv] in {
+// defm PFDIV   : TwoOperandPositData<0b01100, "pdiv", any_fdiv>;
+// }
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//

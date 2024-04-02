@@ -2746,6 +2746,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
     MAKE_CASE(AArch64ISD::CALL_ARM64EC_TO_X64)
     MAKE_CASE(AArch64ISD::URSHR_I_PRED)
+    MAKE_CASE(AArch64ISD::PADD)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -5313,7 +5314,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntNo = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   switch (IntNo) {
-  default: return SDValue();    // Don't custom lower most intrinsics.
+  default:
+    return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::posit32_add: {
+    return DAG.getNode(AArch64ISD::PADD, dl, Op->getVTList(), Op.getOperand(1), Op.getOperand(2));
+  }
   case Intrinsic::thread_pointer: {
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(AArch64ISD::THREAD_POINTER, dl, PtrVT);
