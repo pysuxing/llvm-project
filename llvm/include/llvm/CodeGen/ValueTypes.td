@@ -78,7 +78,7 @@ def ppcf128 : VTFP<128, 16>;  // PPC 128-bit floating point value
 
 def posit16    : VTFP<16, 17>;  // posit 16
 def posit32    : VTFP<32, 18>;  // posit 32
-def posit64    : VTFP<65, 19>;  // posit 64
+def posit64    : VTFP<64, 19>;  // posit 64
 def posit16_1  : VTFP<16, 20>;  // posit 16(1)
 def posit32_3  : VTFP<32, 21>;  // posit 32(3)
 

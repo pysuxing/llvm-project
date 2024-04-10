@@ -6118,6 +6118,7 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT VT = Value.getValueType();
   EVT MemVT = StoreNode->getMemoryVT();
 
+    llvm::dbgs() << "============ lowering a aarch64 store\n";
   if (VT.isVector()) {
     if (useSVEForFixedLengthVectorVT(
             VT,

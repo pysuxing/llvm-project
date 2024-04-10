@@ -1773,7 +1773,9 @@ def int_posit32_add :  DefaultAttrsIntrinsic<[llvm_posit32_ty], [llvm_posit32_ty
 // def int_posit16_1_add :  DefaultAttrsIntrinsic<[llvm_posit16_1_ty], [llvm_posit16_1_ty, llvm_posit16_1_ty]>;
 // def int_posit32_3_add :  DefaultAttrsIntrinsic<[llvm_posit32_3_ty], [llvm_posit32_3_ty, llvm_posit32_3_ty]>;
 }
-
+let IntrProperties = [IntrArgMemOnly] in {
+def int_posit32_store : DefaultAttrsIntrinsic<[llvm_void_ty], [llvm_ptr_ty, llvm_posit32_ty]>;
+}
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
 def int_fptoui_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;

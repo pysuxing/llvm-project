@@ -4371,6 +4371,16 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   default:
     break;
 
+  case ISD::STORE:
+    assert(Node->getNumOperands() == 4);
+    if (Node->getOperand(1).getValueType() == MVT::posit32) {
+      auto StoreNode = dyn_cast<StoreSDNode>(Node);
+      assert(StoreNode);
+      llvm::dbgs() << "select a posit store " << StoreNode->getAddressingMode() << '\n';
+      Node->print(llvm::dbgs(), CurDAG);
+      llvm::dbgs() << '\n';
+    }
+    break;
   case ISD::ATOMIC_CMP_SWAP:
     if (SelectCMP_SWAP(Node))
       return;

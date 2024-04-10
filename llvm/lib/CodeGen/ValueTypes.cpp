@@ -170,6 +170,11 @@ std::string EVT::getEVTString() const {
     if (isFloatingPoint())
       return "f" + utostr(getSizeInBits());
     llvm_unreachable("Invalid EVT!");
+  case MVT::posit16:   return "posit16";
+  case MVT::posit32:   return "posit32";
+  case MVT::posit64:   return "posit64";
+  case MVT::posit16_1: return "posit16_1";
+  case MVT::posit32_3: return "posit32_3";
   case MVT::bf16:      return "bf16";
   case MVT::ppcf128:   return "ppcf128";
   case MVT::isVoid:    return "isVoid";
