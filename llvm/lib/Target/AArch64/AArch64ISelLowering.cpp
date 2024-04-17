@@ -343,6 +343,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i32, &AArch64::GPR32allRegClass);
   addRegisterClass(MVT::i64, &AArch64::GPR64allRegClass);
 
+  // if (Subtarget->hasPosit()) {
+  //   addRegisterClass(MVT::posit32, &AArch64::PFPR32RegClass);
+  //   setOperationAction(ISD::STORE, MVT::posit32, Custom);
+  // }
+  
   if (Subtarget->hasLS64()) {
     addRegisterClass(MVT::i64x8, &AArch64::GPR64x8ClassRegClass);
     setOperationAction(ISD::LOAD, MVT::i64x8, Custom);
@@ -6118,7 +6123,8 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT VT = Value.getValueType();
   EVT MemVT = StoreNode->getMemoryVT();
 
-    llvm::dbgs() << "============ lowering a aarch64 store\n";
+  Op->print(llvm::dbgs(), &DAG);
+  llvm::dbgs() << '\n';
   if (VT.isVector()) {
     if (useSVEForFixedLengthVectorVT(
             VT,
@@ -6180,6 +6186,17 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
                            StoreNode->getOriginalAlign());
     }
     return Chain;
+  } else if (VT.isSimple()) {
+    if (VT == MVT::posit32) {
+      SDValue Chain = StoreNode->getChain();
+      SDValue Value = StoreNode->getValue();
+      SDValue Base = StoreNode->getBasePtr();
+      // SDValue Offset = StoreNode->getOffset();
+      // EVT PtrVT = Base.getValueType();
+      Value = DAG.getBitcast(MVT::f32, Value);
+      return DAG.getStore(Chain, Dl, Value, Base,
+                          StoreNode->getPointerInfo(), StoreNode->getOriginalAlign());
+    }
   }
 
   return SDValue();

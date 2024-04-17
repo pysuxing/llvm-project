@@ -4381,6 +4381,14 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       llvm::dbgs() << '\n';
     }
     break;
+  case ISD::BITCAST:
+    if (Node->getOperand(0).getValueType() == MVT::posit32) {
+      llvm::dbgs() << "select a posit bitcast\n";
+      ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    break;
   case ISD::ATOMIC_CMP_SWAP:
     if (SelectCMP_SWAP(Node))
       return;
