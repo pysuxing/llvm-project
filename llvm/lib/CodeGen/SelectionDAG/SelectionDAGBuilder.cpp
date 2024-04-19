@@ -5183,6 +5183,7 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   bool IsTgtIntrinsic = TLI.getTgtMemIntrinsic(Info, I,
                                                DAG.getMachineFunction(),
                                                Intrinsic);
+
   // Add the intrinsic ID as an integer operand if it's not a target intrinsic.
   if (!IsTgtIntrinsic || Info.opc == ISD::INTRINSIC_VOID ||
       Info.opc == ISD::INTRINSIC_W_CHAIN)

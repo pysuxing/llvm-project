@@ -4371,24 +4371,22 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   default:
     break;
 
-  case ISD::STORE:
-    assert(Node->getNumOperands() == 4);
-    if (Node->getOperand(1).getValueType() == MVT::posit32) {
-      auto StoreNode = dyn_cast<StoreSDNode>(Node);
-      assert(StoreNode);
-      llvm::dbgs() << "select a posit store " << StoreNode->getAddressingMode() << '\n';
-      Node->print(llvm::dbgs(), CurDAG);
-      llvm::dbgs() << '\n';
-    }
-    break;
-  case ISD::BITCAST:
-    if (Node->getOperand(0).getValueType() == MVT::posit32) {
-      llvm::dbgs() << "select a posit bitcast\n";
+  case ISD::BITCAST: {
+    // We may create bitcast between posit and conventional FP types
+    // while lowering posit LOAD/STORE SelectionDAGNode.
+    // See AArch64ISelLowering.cpp
+    EVT SrcTy = Node->getOperand(0).getValueType();
+    EVT DstTy = Node->getValueType(0);
+    if ((SrcTy.isPosit() &&
+         SrcTy.getSimpleVT().getPositAgentType() == DstTy.getSimpleVT()) ||
+        (DstTy.isPosit() &&
+         DstTy.getSimpleVT().getPositAgentType() == SrcTy.getSimpleVT())) {
       ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
       CurDAG->RemoveDeadNode(Node);
       return;
     }
     break;
+  } 
   case ISD::ATOMIC_CMP_SWAP:
     if (SelectCMP_SWAP(Node))
       return;

@@ -456,7 +456,8 @@ enum NodeType : unsigned {
   MSRR,
 
   // Posit Operations
-  PADD,
+  PCVTPF,
+  PCVTFP,
 
   // Strict (exception-raising) floating point comparison
   STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,

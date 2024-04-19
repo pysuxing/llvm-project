@@ -147,6 +147,11 @@ namespace llvm {
       return isSimple() ? V.isFloatingPoint() : isExtendedFloatingPoint();
     }
 
+    /// Return true if this is a posit or a vector posit type
+    bool isPosit() const {
+      return isSimple() && V.isPosit();
+    }
+
     /// Return true if this is an integer or a vector integer type.
     bool isInteger() const {
       return isSimple() ? V.isInteger() : isExtendedInteger();

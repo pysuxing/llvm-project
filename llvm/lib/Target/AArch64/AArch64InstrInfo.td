@@ -813,8 +813,10 @@ def AArch64uaddlv   : SDNode<"AArch64ISD::UADDLV", SDT_AArch64uaddlp>;
 def AArch64saddlv   : SDNode<"AArch64ISD::SADDLV", SDT_AArch64uaddlp>;
 
 // POSITFIXME we need an SDTCisPosit
-def SDT_AArch64padd : SDTypeProfile<1, 2, [SDTCisFP<0>, SDTCisFP<1>, SDTCisSameAs<1, 2>]>;
-def AArch64padd     : SDNode<"AArch64ISD::PADD", SDT_AArch64padd, [SDNPCommutative]>;
+def SDT_AArch64pcvtfp : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+def AArch64pcvtfp     : SDNode<"AArch64ISD::PCVTFP", SDT_AArch64pcvtfp, []>;
+def SDT_AArch64pcvtpf : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
+def AArch64pcvtpf     : SDNode<"AArch64ISD::PCVTPF", SDT_AArch64pcvtpf, []>;
 
 def AArch64uabd     : PatFrags<(ops node:$lhs, node:$rhs),
                                [(abdu node:$lhs, node:$rhs),
@@ -3100,6 +3102,7 @@ defm : ScalToVecROLoadPat<ro64, load,       i64, v2i64, LDRDroW, LDRDroX, dsub>;
 
 defm : ScalToVecROLoadPat<ro64, load,       f64, v2f64, LDRDroW, LDRDroX, dsub>;
 
+
 def : Pat <(v1i64 (scalar_to_vector (i64
                       (load (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
                                            ro_Wextend64:$extend))))),
@@ -3830,17 +3833,6 @@ defm STRS : Store32RO<0b10,  1, 0b00, FPR32Op,  "str", f32,     store>;
 defm STRD : Store64RO<0b11,  1, 0b00, FPR64Op,  "str", f64,     store>;
 defm STRQ : Store128RO<0b00, 1, 0b10, FPR128Op, "str">;
 }
-
-// let Predicates = [HasPosit], AddedComplexity = 10 in {
-//   def : Pat<(store (posit32 PFPR32:$Rt),
-//                         (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm,
-//                                          ro_Wextend32:$extend)),
-//             (STRSroW PFPR32:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend)>;
-//   def : Pat<(store (posit32 PFPR32:$Rt),
-//                         (ro_Xindexed32 GPR64sp:$Rn, GPR32:$Rm,
-//                                          ro_Xextend32:$extend)),
-//             (STRSroX PFPR32:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro_Xextend32:$extend)>;
-// } 
 
 let Predicates = [UseSTRQro], AddedComplexity = 10 in {
   def : Pat<(store (f128 FPR128:$Rt),
@@ -4756,14 +4748,24 @@ def : Pat<(i64 (any_llrint f64:$Rn)),
 //===----------------------------------------------------------------------===//
 // Posit two operand instructions.
 //===----------------------------------------------------------------------===//
-defm PFADD   : TwoOperandPositData<0b01001, "padd", AArch64padd>;
-// defm PFSUB   : TwoOperandPositData<0b01010, "psub", any_fsub>;
-// let SchedRW = [WriteFMul] in {
-// defm PFMUL   : TwoOperandPositData<0b01011, "pmul", any_fmul>;
-// }
-// let SchedRW = [WriteFDiv] in {
-// defm PFDIV   : TwoOperandPositData<0b01100, "pdiv", any_fdiv>;
-// }
+def PCVTFPS : BasePositConvert<0b10001, 0b00, PFPR32, FPR32, "pcvtfp",
+                               [(set (posit32 PFPR32:$Rd), (AArch64pcvtfp (f32 FPR32:$Rn)))]>;
+def PCVTFPD : BasePositConvert<0b10001, 0b01, PFPR32, FPR64, "pcvtfp",
+                               [(set (posit32 PFPR32:$Rd), (AArch64pcvtfp (f64 FPR64:$Rn)))]>;
+def PCVTPFS : BasePositConvert<0b01110, 0b00, FPR32, PFPR32, "pcvtpf",
+                               [(set (f32 FPR32:$Rd), (AArch64pcvtpf (posit32 PFPR32:$Rn)))]>;
+def PCVTPFD : BasePositConvert<0b01110, 0b01, FPR64, PFPR32, "pcvtpf",
+                               [(set (f64 FPR64:$Rd), (AArch64pcvtpf (posit32 PFPR32:$Rn)))]>;
+defm PADD   : TwoOperandPositData<0b01001, "padd", any_fadd>;
+defm PSUB   : TwoOperandPositData<0b01010, "psub", any_fsub>;
+let SchedRW = [WriteFMul] in {
+defm PMUL   : TwoOperandPositData<0b01011, "pmul", any_fmul>;
+}
+let SchedRW = [WriteFDiv] in {
+defm PDIV   : TwoOperandPositData<0b01100, "pdiv", any_fdiv>;
+}
+defm PMLA   : ThreeOperandPositData<0b10100, "pmla", TriOpFrag<(any_fma node:$MHS, node:$RHS, node:$LHS)>>;
+defm PMLS   : ThreeOperandPositData<0b10101, "pmls", TriOpFrag<(any_fma node:$MHS, (fneg node:$RHS), node:$LHS)>>;
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//

@@ -5415,8 +5415,7 @@ multiclass FRIntNNT<bits<2> opcode, string asm, SDPatternOperator node = null_fr
 //---
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
-class BaseTwoOperandPositData<bits<5> opcode, RegisterClass regtype,
-                              string asm, list<dag> pat>
+class BaseTwoOperandPositData<bits<5> opcode, RegisterClass regtype, string asm, list<dag> pat>
     : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm),
          asm, "\t$Rd, $Rn, $Rm", "", pat>,
       Sched<[WriteF]> {
@@ -5433,25 +5432,41 @@ class BaseTwoOperandPositData<bits<5> opcode, RegisterClass regtype,
   let Predicates = [HasPosit];
 }
 
-multiclass TwoOperandPositData<bits<5> opcode, string asm,
-                               SDPatternOperator node> {
-  // def Hrr : BaseTwoOperandPositData<opcode, PFPR16, asm,
-  //                        [(set (posit16 PFPR16:$Rd),
-  //                              (node (posit16 PFPR16:$Rn), (posit16 PFPR16:$Rm)))]> {
-  //   let Inst{23-22} = 0b11; // 16-bit size flag
-  // }
-
+multiclass TwoOperandPositData<bits<5> opcode, string asm, SDPatternOperator node> {
+  def Hrr : BaseTwoOperandPositData<opcode, PFPR16, asm,
+                                    [(set (posit16 PFPR16:$Rd),
+                                      (node (posit16 PFPR16:$Rn), (posit16 PFPR16:$Rm)))]> {
+    let Inst{23-22} = 0b11; // 16-bit size flag
+  }
   def Srr : BaseTwoOperandPositData<opcode, PFPR32, asm,
-                         [(set (posit32 PFPR32:$Rd),
-                               (node (posit32 PFPR32:$Rn), (posit32 PFPR32:$Rm)))]> {
+                                    [(set (posit32 PFPR32:$Rd),
+                                       (node (posit32 PFPR32:$Rn), (posit32 PFPR32:$Rm)))]> {
     let Inst{23-22} = 0b00; // 32-bit size flag
   }
+  def Drr : BaseTwoOperandPositData<opcode, PFPR64, asm,
+                                    [(set (posit64 PFPR64:$Rd),
+                                      (node (posit64 PFPR64:$Rn), (posit64 PFPR64:$Rm)))]> {
+    let Inst{23-22} = 0b01; // 64-bit size flag
+  }
+}
 
-  // def Drr : BaseTwoOperandPositData<opcode, PFPR64, asm,
-  //                        [(set (posit64 PFPR64:$Rd),
-  //                              (node (posit64 PFPR64:$Rn), (posit64 PFPR64:$Rm)))]> {
-  //   let Inst{23-22} = 0b01; // 64-bit size flag
-  // }
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1 in
+class BasePositConvert<bits<5> opcode, bits<2> ty,
+                       RegisterClass outregtype, RegisterClass inregtype,
+                       string asm, list<dag> pat>
+    : I<(outs outregtype:$Rd), (ins inregtype:$Rn), asm, "\t$Rd, $Rn", "", pat>,
+      Sched<[WriteF]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  let Inst{31-24} = 0b10001110;
+  let Inst{23-22} = ty; // 00/01 for f32/f64
+  let Inst{21}    = 0;
+  let Inst{20-16} = 0;
+  let Inst{15}    = 0;
+  let Inst{14-10} = opcode;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+  let Predicates = [HasPosit];
 }
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
@@ -5517,6 +5532,45 @@ multiclass TwoOperandFPDataNeg<bits<4> opcode, string asm,
 //---
 // Three operand floating point data processing
 //---
+
+let mayRaiseFPException = 1, Uses = [FPCR] in
+class BaseThreeOperandPositData<bits<5> opcode, RegisterClass regtype,
+                                string asm, list<dag> pat>
+    : I<(outs regtype:$dst), (ins regtype:$Rd, regtype:$Rn, regtype: $Rm),
+         asm, "\t$Rd, $Rn, $Rm", "$dst = $Rd", pat>,
+      Sched<[WriteFMul]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31-24} = 0b10001110;
+  let Inst{21}    = 0;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0;
+  let Inst{14-10} = opcode;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+  let Predicates = [HasPosit];
+}
+
+multiclass ThreeOperandPositData<bits<5> opcode, string asm, SDPatternOperator node> {
+  def Hrrr : BaseThreeOperandPositData<opcode, PFPR16, asm,
+            [(set (posit16 PFPR16:$dst),
+                  (node (posit16 PFPR16:$Rd), (posit16 PFPR16:$Rn), (posit16 PFPR16:$Rm)))]> {
+    let Inst{23-22} = 0b11; // 16-bit size flag
+  }
+
+  def Srrr : BaseThreeOperandPositData<opcode, PFPR32, asm,
+            [(set PFPR32:$dst,
+                  (node (posit32 PFPR32:$Rd), (posit32 PFPR32:$Rn), (posit32 PFPR32:$Rm)))]> {
+    let Inst{23-22} = 0b00; // 32-bit size flag
+  }
+
+  def Drrr : BaseThreeOperandPositData<opcode, PFPR64, asm,
+            [(set PFPR64:$dst,
+                  (node (posit64 PFPR64:$Rd), (posit64 PFPR64:$Rn), (posit64 PFPR64:$Rm)))]> {
+    let Inst{23-22} = 0b01; // 64-bit size flag
+  }
+}
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 class BaseThreeOperandFPData<bit isNegated, bit isSub,

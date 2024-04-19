@@ -343,10 +343,26 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i32, &AArch64::GPR32allRegClass);
   addRegisterClass(MVT::i64, &AArch64::GPR64allRegClass);
 
-  // if (Subtarget->hasPosit()) {
-  //   addRegisterClass(MVT::posit32, &AArch64::PFPR32RegClass);
-  //   setOperationAction(ISD::STORE, MVT::posit32, Custom);
-  // }
+  if (Subtarget->hasPosit()) {
+    // We have to manually lower posit LOAD/STORE to reuse
+    // instruction selection codes for conventional FP LOAD/STORE
+    addRegisterClass(MVT::posit16, &AArch64::PFPR16RegClass);
+    addRegisterClass(MVT::posit32, &AArch64::PFPR32RegClass);
+    addRegisterClass(MVT::posit64, &AArch64::PFPR64RegClass);
+    addRegisterClass(MVT::posit16_1, &AArch64::PFPR16RegClass);
+    addRegisterClass(MVT::posit32_3, &AArch64::PFPR32RegClass);
+    setOperationAction(ISD::STORE, MVT::posit16, Custom);
+    setOperationAction(ISD::LOAD, MVT::posit16, Custom);
+    setOperationAction(ISD::STORE, MVT::posit32, Custom);
+    setOperationAction(ISD::LOAD, MVT::posit32, Custom);
+    setOperationAction(ISD::STORE, MVT::posit64, Custom);
+    setOperationAction(ISD::LOAD, MVT::posit64, Custom);
+    setOperationAction(ISD::STORE, MVT::posit16_1, Custom);
+    setOperationAction(ISD::LOAD, MVT::posit16_1, Custom);
+    setOperationAction(ISD::STORE, MVT::posit32_3, Custom);
+    setOperationAction(ISD::LOAD, MVT::posit32_3, Custom);
+    // POSITFIXME add posit vector types
+  }
   
   if (Subtarget->hasLS64()) {
     addRegisterClass(MVT::i64x8, &AArch64::GPR64x8ClassRegClass);
@@ -2751,7 +2767,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CTTZ_ELTS)
     MAKE_CASE(AArch64ISD::CALL_ARM64EC_TO_X64)
     MAKE_CASE(AArch64ISD::URSHR_I_PRED)
-    MAKE_CASE(AArch64ISD::PADD)
+    MAKE_CASE(AArch64ISD::PCVTFP)
+    MAKE_CASE(AArch64ISD::PCVTPF)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -5321,9 +5338,18 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
-  case Intrinsic::posit32_add: {
-    return DAG.getNode(AArch64ISD::PADD, dl, Op->getVTList(), Op.getOperand(1), Op.getOperand(2));
-  }
+  // case Intrinsic::convert_to_posit16:
+  //   return DAG.getNode(AArch64ISD::PCVTFP, dl, Op->getVTList(), Op.getOperand(1));
+  // case Intrinsic::convert_from_posit16:
+  //   return DAG.getNode(AArch64ISD::PCVTPF, dl, Op->getVTList(), Op.getOperand(1));
+  case Intrinsic::convert_to_posit32:
+    return DAG.getNode(AArch64ISD::PCVTFP, dl, Op->getVTList(), Op.getOperand(1));
+  case Intrinsic::convert_from_posit32:
+    return DAG.getNode(AArch64ISD::PCVTPF, dl, Op->getVTList(), Op.getOperand(1));
+  // case Intrinsic::convert_to_posit64:
+  //   return DAG.getNode(AArch64ISD::PCVTFP, dl, Op->getVTList(), Op.getOperand(1));
+  // case Intrinsic::convert_from_posit64:
+  //   return DAG.getNode(AArch64ISD::PCVTPF, dl, Op->getVTList(), Op.getOperand(1));
   case Intrinsic::thread_pointer: {
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(AArch64ISD::THREAD_POINTER, dl, PtrVT);
@@ -6109,6 +6135,17 @@ static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
                       ST->getBasePtr(), ST->getMemOperand());
 }
 
+static SDValue lowerPositStore(StoreSDNode *StoreNode, SelectionDAG &DAG) {
+  SDLoc Dl(StoreNode);
+  SDValue Value = StoreNode->getValue();
+  SDValue Chain = StoreNode->getChain();
+  SDValue Base = StoreNode->getBasePtr();
+  MVT AgentTy = Value.getSimpleValueType().getPositAgentType();
+  Value = DAG.getBitcast(AgentTy, Value);
+  return DAG.getStore(Chain, Dl, Value, Base,
+                      StoreNode->getPointerInfo(), StoreNode->getOriginalAlign());
+}
+
 // Custom lowering for any store, vector or scalar and/or default or with
 // a truncate operations.  Currently only custom lower truncate operation
 // from vector v4i16 to v4i8 or volatile stores of i128.
@@ -6123,8 +6160,10 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   EVT VT = Value.getValueType();
   EVT MemVT = StoreNode->getMemoryVT();
 
-  Op->print(llvm::dbgs(), &DAG);
-  llvm::dbgs() << '\n';
+  // Lower posit STORE nodes
+  if (VT.isPosit())
+    return lowerPositStore(StoreNode, DAG);
+
   if (VT.isVector()) {
     if (useSVEForFixedLengthVectorVT(
             VT,
@@ -6186,17 +6225,6 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
                            StoreNode->getOriginalAlign());
     }
     return Chain;
-  } else if (VT.isSimple()) {
-    if (VT == MVT::posit32) {
-      SDValue Chain = StoreNode->getChain();
-      SDValue Value = StoreNode->getValue();
-      SDValue Base = StoreNode->getBasePtr();
-      // SDValue Offset = StoreNode->getOffset();
-      // EVT PtrVT = Base.getValueType();
-      Value = DAG.getBitcast(MVT::f32, Value);
-      return DAG.getStore(Chain, Dl, Value, Base,
-                          StoreNode->getPointerInfo(), StoreNode->getOriginalAlign());
-    }
   }
 
   return SDValue();
@@ -6234,11 +6262,29 @@ SDValue AArch64TargetLowering::LowerStore128(SDValue Op,
   return Result;
 }
 
+static SDValue lowerPositLoad(LoadSDNode *LoadNode, SelectionDAG &DAG) {
+  SDLoc DL(LoadNode);
+  MVT VT = LoadNode->getSimpleValueType(0);
+  MVT AgentTy = VT.getPositAgentType();
+  SDValue Chain = LoadNode->getChain();
+  SDValue Base = LoadNode->getBasePtr();
+  SDValue Value =
+      DAG.getLoad(AgentTy, DL, Chain, Base, LoadNode->getPointerInfo(),
+                  LoadNode->getOriginalAlign());
+  Chain = cast<LoadSDNode>(Value)->getChain();
+  Value = DAG.getBitcast(MVT::posit32, Value);
+  return DAG.getMergeValues({Value, Chain}, DL);
+}
+
 SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
                                          SelectionDAG &DAG) const {
   SDLoc DL(Op);
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
+
+  // Lower posit LOAD nodes
+  if (Op->getValueType(0).isPosit())
+    return lowerPositLoad(LoadNode, DAG);
 
   if (LoadNode->getMemoryVT() == MVT::i64x8) {
     SmallVector<SDValue, 8> Ops;
@@ -16721,6 +16767,9 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
 
   if (!VT.isSimple())
     return false;
+
+  if (VT.isPosit())
+    return Subtarget->hasPosit();
 
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::f16:
