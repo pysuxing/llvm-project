@@ -465,8 +465,8 @@ def PFPR16 : RegisterClass<"AArch64", [posit16, posit16_1], 16, (sequence "H%u",
 }
 
 def PFPR32 : RegisterClass<"AArch64", [posit32, posit32_3], 32,(sequence "S%u", 0, 31)>;
-def PFPR64 : RegisterClass<"AArch64", [posit64],
-                                     64, (sequence "D%u", 0, 31)>;
+def PFPR64 : RegisterClass<"AArch64", [posit64], 64, (sequence "D%u", 0, 31)>;
+
 // We don't (yet) have an f128 legal type, so don't use that here. We
 // normalize 128-bit vectors to v2f64 for arg passing and such, so use
 // that here.

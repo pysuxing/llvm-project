@@ -3681,6 +3681,18 @@ APInt IEEEFloat::bitcastToAPInt() const {
   if (semantics == (const llvm::fltSemantics *)&semFloatTF32)
     return convertFloatTF32APFloatToAPInt();
 
+  // POSITFIXME
+  if (semantics == (const llvm::fltSemantics *)&semPosit16)
+    return convertIEEEFloatToAPInt<semPosit16>();
+  if (semantics == (const llvm::fltSemantics *)&semPosit16_1)
+    return convertIEEEFloatToAPInt<semPosit16_1>();
+  if (semantics == (const llvm::fltSemantics *)&semPosit32)
+    return convertIEEEFloatToAPInt<semPosit32>();
+  if (semantics == (const llvm::fltSemantics *)&semPosit32_3)
+    return convertIEEEFloatToAPInt<semPosit32_3>();
+  if (semantics == (const llvm::fltSemantics *)&semPosit64)
+    return convertIEEEFloatToAPInt<semPosit64>();
+
   assert(semantics == (const llvm::fltSemantics*)&semX87DoubleExtended &&
          "unknown format!");
   return convertF80LongDoubleAPFloatToAPInt();

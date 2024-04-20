@@ -7063,6 +7063,12 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         RC = &AArch64::FPR64RegClass;
       else if (RegVT == MVT::f128 || RegVT.is128BitVector())
         RC = &AArch64::FPR128RegClass;
+      else if (RegVT == MVT::posit16 || RegVT == MVT::posit16_1)
+        RC = &AArch64::PFPR16RegClass;
+      else if (RegVT == MVT::posit32 || RegVT == MVT::posit32_3)
+        RC = &AArch64::PFPR32RegClass;
+      else if (RegVT == MVT::posit64)
+        RC = &AArch64::PFPR64RegClass;
       else if (RegVT.isScalableVector() &&
                RegVT.getVectorElementType() == MVT::i1) {
         FuncInfo->setIsSVECC(true);
@@ -16768,8 +16774,10 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   if (!VT.isSimple())
     return false;
 
-  if (VT.isPosit())
-    return Subtarget->hasPosit();
+  if (VT.isPosit()) {
+    assert(Subtarget->hasPosit());
+    return true;
+  }
 
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::f16:

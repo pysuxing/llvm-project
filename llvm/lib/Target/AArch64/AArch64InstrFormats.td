@@ -5415,6 +5415,37 @@ multiclass FRIntNNT<bits<2> opcode, string asm, SDPatternOperator node = null_fr
 //---
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
+class BaseTwoOperandPositDataOld<bits<5> opcode, RegisterClass regtype, string asm, list<dag> pat>
+    : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm),
+         asm, "\t$Rd, $Rn, $Rm", "", pat>,
+      Sched<[WriteF]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31-24} = 0b11001110;
+  let Inst{21}    = 0;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0;
+  let Inst{14-10} = opcode;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+  let Predicates = [HasPosit];
+}
+
+multiclass TwoOperandPositDataOld<bits<5> opcode, string asm, SDPatternOperator node> {
+  def Hrr : BaseTwoOperandPositDataOld<opcode, PFPR16, asm,
+                                       [(set (posit16_1 PFPR16:$Rd),
+                                        (node (posit16_1 PFPR16:$Rn), (posit16_1 PFPR16:$Rm)))]> {
+    let Inst{23-22} = 0b11; // 16-bit size flag
+  }
+  def Srr : BaseTwoOperandPositDataOld<opcode, PFPR32, asm,
+                                       [(set (posit32_3 PFPR32:$Rd),
+                                        (node (posit32_3 PFPR32:$Rn), (posit32_3 PFPR32:$Rm)))]> {
+    let Inst{23-22} = 0b00; // 32-bit size flag
+  }
+}
+
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
 class BaseTwoOperandPositData<bits<5> opcode, RegisterClass regtype, string asm, list<dag> pat>
     : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm),
          asm, "\t$Rd, $Rn, $Rm", "", pat>,
@@ -5569,6 +5600,39 @@ multiclass ThreeOperandPositData<bits<5> opcode, string asm, SDPatternOperator n
             [(set PFPR64:$dst,
                   (node (posit64 PFPR64:$Rd), (posit64 PFPR64:$Rn), (posit64 PFPR64:$Rm)))]> {
     let Inst{23-22} = 0b01; // 64-bit size flag
+  }
+}
+
+let mayRaiseFPException = 1, Uses = [FPCR] in
+class BaseThreeOperandPositDataOld<bits<5> opcode, RegisterClass regtype,
+                                   string asm, list<dag> pat>
+    : I<(outs regtype:$dst), (ins regtype:$Rd, regtype:$Rn, regtype: $Rm),
+         asm, "\t$Rd, $Rn, $Rm", "$dst = $Rd", pat>,
+      Sched<[WriteFMul]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31-24} = 0b11001110;
+  let Inst{21}    = 0;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0;
+  let Inst{14-10} = opcode;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+  let Predicates = [HasPosit];
+}
+
+multiclass ThreeOperandPositDataOld<bits<5> opcode, string asm, SDPatternOperator node> {
+  def Hrrr : BaseThreeOperandPositDataOld<opcode, PFPR16, asm,
+            [(set (posit16_1 PFPR16:$dst),
+                  (node (posit16_1 PFPR16:$Rd), (posit16_1 PFPR16:$Rn), (posit16_1 PFPR16:$Rm)))]> {
+    let Inst{23-22} = 0b11; // 16-bit size flag
+  }
+
+  def Srrr : BaseThreeOperandPositDataOld<opcode, PFPR32, asm,
+            [(set PFPR32:$dst,
+                  (node (posit32_3 PFPR32:$Rd), (posit32_3 PFPR32:$Rn), (posit32_3 PFPR32:$Rm)))]> {
+    let Inst{23-22} = 0b00; // 32-bit size flag
   }
 }
 
