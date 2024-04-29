@@ -3929,6 +3929,16 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloat8E4M3B11FNUZAPInt(api);
   if (Sem == &semFloatTF32)
     return initFromFloatTF32APInt(api);
+  if (Sem == &semPosit16)
+    return initFromHalfAPInt(api);
+  if (Sem == &semPosit32)
+    return initFromFloatAPInt(api);
+  if (Sem == &semPosit64)
+    return initFromDoubleAPInt(api);
+  if (Sem == &semPosit16_1)
+    return initFromHalfAPInt(api);
+  if (Sem == &semPosit32_3)
+    return initFromFloatAPInt(api);
 
   llvm_unreachable(nullptr);
 }
