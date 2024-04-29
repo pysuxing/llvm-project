@@ -253,6 +253,7 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::PFPR16RegClassID:
   case AArch64::PFPR32RegClassID:
   case AArch64::PFPR64RegClassID:
+  case AArch64::PFPR128RegClassID:
   case AArch64::DDRegClassID:
   case AArch64::DDDRegClassID:
   case AArch64::DDDDRegClassID:

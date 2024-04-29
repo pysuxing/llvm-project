@@ -478,6 +478,46 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getDoubleTy(Context), 128);
   case MVT::v256f64:
     return FixedVectorType::get(Type::getDoubleTy(Context), 256);
+  case MVT::v1posit16:
+    return FixedVectorType::get(Type::getPosit16Ty(Context), 1);
+  case MVT::v2posit16:
+    return FixedVectorType::get(Type::getPosit16Ty(Context), 2);
+  case MVT::v4posit16:
+    return FixedVectorType::get(Type::getPosit16Ty(Context), 4);
+  case MVT::v8posit16:
+    return FixedVectorType::get(Type::getPosit16Ty(Context), 8);
+  case MVT::v1posit32:
+    return FixedVectorType::get(Type::getPosit32Ty(Context), 1);
+  case MVT::v2posit32:
+    return FixedVectorType::get(Type::getPosit32Ty(Context), 2);
+  case MVT::v4posit32:
+    return FixedVectorType::get(Type::getPosit32Ty(Context), 4);
+  case MVT::v8posit32:
+    return FixedVectorType::get(Type::getPosit32Ty(Context), 8);
+  case MVT::v1posit64:
+    return FixedVectorType::get(Type::getPosit64Ty(Context), 1);
+  case MVT::v2posit64:
+    return FixedVectorType::get(Type::getPosit64Ty(Context), 2);
+  case MVT::v4posit64:
+    return FixedVectorType::get(Type::getPosit64Ty(Context), 4);
+  case MVT::v8posit64:
+    return FixedVectorType::get(Type::getPosit64Ty(Context), 8);
+  case MVT::v1posit16_1:
+    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 1);
+  case MVT::v2posit16_1:
+    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 2);
+  case MVT::v4posit16_1:
+    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 4);
+  case MVT::v8posit16_1:
+    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 8);
+  case MVT::v1posit32_3:
+    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 1);
+  case MVT::v2posit32_3:
+    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 2);
+  case MVT::v4posit32_3:
+    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 4);
+  case MVT::v8posit32_3:
+    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 8);
   case MVT::nxv1i1:
     return ScalableVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::nxv2i1:

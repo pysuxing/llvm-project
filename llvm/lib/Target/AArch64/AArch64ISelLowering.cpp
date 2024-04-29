@@ -362,6 +362,38 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::posit32_3, Custom);
     setOperationAction(ISD::LOAD, MVT::posit32_3, Custom);
     // POSITFIXME add posit vector types
+    // 128bit vectors
+    addRegisterClass(MVT::v2posit64, &AArch64::PFPR128RegClass);
+    addRegisterClass(MVT::v4posit32, &AArch64::PFPR128RegClass);
+    addRegisterClass(MVT::v8posit16, &AArch64::PFPR128RegClass);
+    addRegisterClass(MVT::v4posit32_3, &AArch64::PFPR128RegClass);
+    addRegisterClass(MVT::v8posit16_1, &AArch64::PFPR128RegClass);
+    setOperationAction(ISD::STORE, MVT::v2posit64, Custom);
+    setOperationAction(ISD::LOAD, MVT::v2posit64, Custom);
+    setOperationAction(ISD::STORE, MVT::v4posit32, Custom);
+    setOperationAction(ISD::LOAD, MVT::v4posit32, Custom);
+    setOperationAction(ISD::STORE, MVT::v8posit16, Custom);
+    setOperationAction(ISD::LOAD, MVT::v8posit16, Custom);
+    setOperationAction(ISD::STORE, MVT::v4posit32_3, Custom);
+    setOperationAction(ISD::LOAD, MVT::v4posit32_3, Custom);
+    setOperationAction(ISD::STORE, MVT::v8posit16_1, Custom);
+    setOperationAction(ISD::LOAD, MVT::v8posit16_1, Custom);
+    // 64bit vectors
+    addRegisterClass(MVT::v1posit64, &AArch64::PFPR64RegClass);
+    addRegisterClass(MVT::v2posit32, &AArch64::PFPR64RegClass);
+    addRegisterClass(MVT::v4posit16, &AArch64::PFPR64RegClass);
+    addRegisterClass(MVT::v2posit32_3, &AArch64::PFPR64RegClass);
+    addRegisterClass(MVT::v4posit16_1, &AArch64::PFPR64RegClass);
+    setOperationAction(ISD::STORE, MVT::v1posit64, Custom);
+    setOperationAction(ISD::LOAD, MVT::v1posit64, Custom);
+    setOperationAction(ISD::STORE, MVT::v2posit32, Custom);
+    setOperationAction(ISD::LOAD, MVT::v2posit32, Custom);
+    setOperationAction(ISD::STORE, MVT::v4posit16, Custom);
+    setOperationAction(ISD::LOAD, MVT::v4posit16, Custom);
+    setOperationAction(ISD::STORE, MVT::v2posit32_3, Custom);
+    setOperationAction(ISD::LOAD, MVT::v2posit32_3, Custom);
+    setOperationAction(ISD::STORE, MVT::v4posit16_1, Custom);
+    setOperationAction(ISD::LOAD, MVT::v4posit16_1, Custom);
   }
   
   if (Subtarget->hasLS64()) {
@@ -4680,7 +4712,6 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT OpVT = Op.getValueType();
   EVT ArgVT = Op.getOperand(0).getValueType();
-
   if (useSVEForFixedLengthVectorVT(OpVT))
     return LowerFixedLengthBitcastToSVE(Op, DAG);
 
@@ -5338,6 +5369,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
+  // POSITFIXME IEEE->posit32->positxx
   // case Intrinsic::convert_to_posit16:
   //   return DAG.getNode(AArch64ISD::PCVTFP, dl, Op->getVTList(), Op.getOperand(1));
   // case Intrinsic::convert_from_posit16:
@@ -6163,7 +6195,6 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
   // Lower posit STORE nodes
   if (VT.isPosit())
     return lowerPositStore(StoreNode, DAG);
-
   if (VT.isVector()) {
     if (useSVEForFixedLengthVectorVT(
             VT,
@@ -6272,7 +6303,7 @@ static SDValue lowerPositLoad(LoadSDNode *LoadNode, SelectionDAG &DAG) {
       DAG.getLoad(AgentTy, DL, Chain, Base, LoadNode->getPointerInfo(),
                   LoadNode->getOriginalAlign());
   Chain = cast<LoadSDNode>(Value)->getChain();
-  Value = DAG.getBitcast(MVT::posit32, Value);
+  Value = DAG.getBitcast(VT, Value);
   return DAG.getMergeValues({Value, Chain}, DL);
 }
 
@@ -7060,9 +7091,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
       else if (RegVT == MVT::f32)
         RC = &AArch64::FPR32RegClass;
       else if (RegVT == MVT::f64 || RegVT.is64BitVector())
-        RC = &AArch64::FPR64RegClass;
+        RC = RegVT.isPosit() ? &AArch64::PFPR64RegClass : &AArch64::FPR64RegClass;
       else if (RegVT == MVT::f128 || RegVT.is128BitVector())
-        RC = &AArch64::FPR128RegClass;
+        RC = RegVT.isPosit() ? &AArch64::PFPR128RegClass : &AArch64::FPR128RegClass;
       else if (RegVT == MVT::posit16 || RegVT == MVT::posit16_1)
         RC = &AArch64::PFPR16RegClass;
       else if (RegVT == MVT::posit32 || RegVT == MVT::posit32_3)

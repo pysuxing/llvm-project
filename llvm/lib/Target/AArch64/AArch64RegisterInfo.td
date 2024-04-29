@@ -467,6 +467,10 @@ def PFPR16 : RegisterClass<"AArch64", [posit16, posit16_1], 16, (sequence "H%u",
 def PFPR32 : RegisterClass<"AArch64", [posit32, posit32_3], 32,(sequence "S%u", 0, 31)>;
 def PFPR64 : RegisterClass<"AArch64", [posit64], 64, (sequence "D%u", 0, 31)>;
 
+def PFPR128 : RegisterClass<"AArch64",
+                           [v8posit16, v8posit16_1, v4posit32, v4posit32, v2posit64],
+                           128, (sequence "Q%u", 0, 31)>;
+
 // We don't (yet) have an f128 legal type, so don't use that here. We
 // normalize 128-bit vectors to v2f64 for arg passing and such, so use
 // that here.
@@ -542,6 +546,14 @@ def V64  : RegisterOperand<FPR64, "printVRegOperand"> {
 }
 
 def V128 : RegisterOperand<FPR128, "printVRegOperand"> {
+  let ParserMatchClass = VectorReg128AsmOperand;
+}
+
+// def PV64  : RegisterOperand<PFPR64, "printVRegOperand"> {
+//   let ParserMatchClass = VectorReg64AsmOperand;
+// }
+
+def PV128 : RegisterOperand<PFPR128, "printVRegOperand"> {
   let ParserMatchClass = VectorReg128AsmOperand;
 }
 

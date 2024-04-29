@@ -4373,14 +4373,19 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 
   case ISD::BITCAST: {
     // We may create bitcast between posit and conventional FP types
-    // while lowering posit LOAD/STORE SelectionDAGNode.
-    // See AArch64ISelLowering.cpp
+    // while lowering posit LOAD/STORE SelectionDAGNode. See
+    // AArch64ISelLowering.cpp
+    // NOTE we use getFixedSizeInBits() here instead of exactly type match
+    // because some agent vector type, like v4f32 are set to be 'promoted'
+    // to v4i32 by AArch64IselLowering in the ISD::STORE operation.
     EVT SrcTy = Node->getOperand(0).getValueType();
     EVT DstTy = Node->getValueType(0);
     if ((SrcTy.isPosit() &&
-         SrcTy.getSimpleVT().getPositAgentType() == DstTy.getSimpleVT()) ||
+         SrcTy.getSimpleVT().getPositAgentType().getFixedSizeInBits() ==
+             DstTy.getSimpleVT().getFixedSizeInBits()) ||
         (DstTy.isPosit() &&
-         DstTy.getSimpleVT().getPositAgentType() == SrcTy.getSimpleVT())) {
+         DstTy.getSimpleVT().getPositAgentType().getFixedSizeInBits() ==
+             SrcTy.getSimpleVT().getFixedSizeInBits())) {
       ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
       CurDAG->RemoveDeadNode(Node);
       return;

@@ -5481,6 +5481,69 @@ multiclass TwoOperandPositData<bits<5> opcode, string asm, SDPatternOperator nod
   }
 }
 
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
+class PositBaseSIMDThreeSameVector<bits<5> opcode, bits<2> typecode, RegisterOperand regtype,
+                                   string asm, string kind, list<dag> pattern>
+  : I<(outs regtype:$Rd), (ins regtype:$Rn, regtype:$Rm), asm,
+      "\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind, "", pattern>,
+    Sched<[WriteVd]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31-24} = 0b10101110;
+  let Inst{23-22}  = typecode;
+  let Inst{21}    = 0;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0;
+  let Inst{14-10} = opcode;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+  let Predicates = [HasPosit];
+}
+
+let mayRaiseFPException = 1, Uses = [FPCR] in
+multiclass SIMDThreeSameVectorPosit<bits<5> opcode, string asm, SDPatternOperator OpNode> {
+  def v8posit16 : PositBaseSIMDThreeSameVector<opcode, 0b11, PV128, asm, ".8ph",
+        [(set (v8posit16 PV128:$Rd), (OpNode (v8posit16 PV128:$Rn), (v8posit16 PV128:$Rm)))]>;
+  def v4posit32 : PositBaseSIMDThreeSameVector<opcode, 0b00, PV128, asm, ".4ps",
+        [(set (v4posit32 PV128:$Rd), (OpNode (v4posit32 PV128:$Rn), (v4posit32 PV128:$Rm)))]>;
+  def v2posit64 : PositBaseSIMDThreeSameVector<opcode, 0b01, PV128, asm, ".2pd",
+        [(set (v2posit64 PV128:$Rd), (OpNode (v2posit64 PV128:$Rn), (v2posit64 PV128:$Rm)))]>;
+}
+
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
+class PositBaseSIMDThreeSameVectorTied<bits<5> opcode, bits<2> typecode, RegisterOperand regtype,
+                                       string asm, string kind, list<dag> pattern>
+  : I<(outs regtype:$dst), (ins regtype:$Rd, regtype:$Rn, regtype:$Rm), asm,
+      "\t$Rd" # kind # ", $Rn" # kind # ", $Rm" # kind, "$Rd = $dst", pattern>,
+    Sched<[WriteVd]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31-24} = 0b10101110;
+  let Inst{23-22} = typecode;
+  let Inst{21}    = 0;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0;
+  let Inst{14-10} = opcode;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+  let Predicates = [HasPosit];
+}
+
+let mayRaiseFPException = 1, Uses = [FPCR] in
+multiclass SIMDThreeSameVectorPositTied<bits<5> opcode, string asm, SDPatternOperator OpNode> {
+  def v8posit16 : PositBaseSIMDThreeSameVectorTied<opcode, 0b11, PV128, asm, ".8ph",
+     [(set (v8posit16 PV128:$dst),
+           (OpNode (v8posit16 PV128:$Rd), (v8posit16 PV128:$Rn), (v8posit16 PV128:$Rm)))]>;
+  def v4posit32 : PositBaseSIMDThreeSameVectorTied<opcode, 0b00, PV128, asm, ".8ph",
+     [(set (v4posit32 PV128:$dst),
+           (OpNode (v4posit32 PV128:$Rd), (v4posit32 PV128:$Rn), (v4posit32 PV128:$Rm)))]>;
+  def v2posit64 : PositBaseSIMDThreeSameVectorTied<opcode, 0b01, PV128, asm, ".8ph",
+     [(set (v2posit64 PV128:$dst),
+           (OpNode (v2posit64 PV128:$Rd), (v2posit64 PV128:$Rn), (v2posit64 PV128:$Rm)))]>;
+}
+
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1 in
 class BasePositConvert<bits<5> opcode, bits<2> ty,
                        RegisterClass outregtype, RegisterClass inregtype,
