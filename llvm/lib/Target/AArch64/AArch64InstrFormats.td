@@ -5503,11 +5503,11 @@ class PositBaseSIMDThreeSameVector<bits<5> opcode, bits<2> typecode, RegisterOpe
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDThreeSameVectorPosit<bits<5> opcode, string asm, SDPatternOperator OpNode> {
-  def v8posit16 : PositBaseSIMDThreeSameVector<opcode, 0b11, PV128, asm, ".8ph",
+  def v8posit16 : PositBaseSIMDThreeSameVector<opcode, 0b11, PV128, asm, ".8h",
         [(set (v8posit16 PV128:$Rd), (OpNode (v8posit16 PV128:$Rn), (v8posit16 PV128:$Rm)))]>;
-  def v4posit32 : PositBaseSIMDThreeSameVector<opcode, 0b00, PV128, asm, ".4ps",
+  def v4posit32 : PositBaseSIMDThreeSameVector<opcode, 0b00, PV128, asm, ".4s",
         [(set (v4posit32 PV128:$Rd), (OpNode (v4posit32 PV128:$Rn), (v4posit32 PV128:$Rm)))]>;
-  def v2posit64 : PositBaseSIMDThreeSameVector<opcode, 0b01, PV128, asm, ".2pd",
+  def v2posit64 : PositBaseSIMDThreeSameVector<opcode, 0b01, PV128, asm, ".2d",
         [(set (v2posit64 PV128:$Rd), (OpNode (v2posit64 PV128:$Rn), (v2posit64 PV128:$Rm)))]>;
 }
 
@@ -5533,13 +5533,13 @@ class PositBaseSIMDThreeSameVectorTied<bits<5> opcode, bits<2> typecode, Registe
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDThreeSameVectorPositTied<bits<5> opcode, string asm, SDPatternOperator OpNode> {
-  def v8posit16 : PositBaseSIMDThreeSameVectorTied<opcode, 0b11, PV128, asm, ".8ph",
+  def v8posit16 : PositBaseSIMDThreeSameVectorTied<opcode, 0b11, PV128, asm, ".8h",
      [(set (v8posit16 PV128:$dst),
            (OpNode (v8posit16 PV128:$Rd), (v8posit16 PV128:$Rn), (v8posit16 PV128:$Rm)))]>;
-  def v4posit32 : PositBaseSIMDThreeSameVectorTied<opcode, 0b00, PV128, asm, ".4ps",
+  def v4posit32 : PositBaseSIMDThreeSameVectorTied<opcode, 0b00, PV128, asm, ".4s",
      [(set (v4posit32 PV128:$dst),
            (OpNode (v4posit32 PV128:$Rd), (v4posit32 PV128:$Rn), (v4posit32 PV128:$Rm)))]>;
-  def v2posit64 : PositBaseSIMDThreeSameVectorTied<opcode, 0b01, PV128, asm, ".2pd",
+  def v2posit64 : PositBaseSIMDThreeSameVectorTied<opcode, 0b01, PV128, asm, ".2d",
      [(set (v2posit64 PV128:$dst),
            (OpNode (v2posit64 PV128:$Rd), (v2posit64 PV128:$Rn), (v2posit64 PV128:$Rm)))]>;
 }
