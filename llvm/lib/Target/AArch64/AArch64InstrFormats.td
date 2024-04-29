@@ -5536,10 +5536,10 @@ multiclass SIMDThreeSameVectorPositTied<bits<5> opcode, string asm, SDPatternOpe
   def v8posit16 : PositBaseSIMDThreeSameVectorTied<opcode, 0b11, PV128, asm, ".8ph",
      [(set (v8posit16 PV128:$dst),
            (OpNode (v8posit16 PV128:$Rd), (v8posit16 PV128:$Rn), (v8posit16 PV128:$Rm)))]>;
-  def v4posit32 : PositBaseSIMDThreeSameVectorTied<opcode, 0b00, PV128, asm, ".8ph",
+  def v4posit32 : PositBaseSIMDThreeSameVectorTied<opcode, 0b00, PV128, asm, ".4ps",
      [(set (v4posit32 PV128:$dst),
            (OpNode (v4posit32 PV128:$Rd), (v4posit32 PV128:$Rn), (v4posit32 PV128:$Rm)))]>;
-  def v2posit64 : PositBaseSIMDThreeSameVectorTied<opcode, 0b01, PV128, asm, ".8ph",
+  def v2posit64 : PositBaseSIMDThreeSameVectorTied<opcode, 0b01, PV128, asm, ".2pd",
      [(set (v2posit64 PV128:$dst),
            (OpNode (v2posit64 PV128:$Rd), (v2posit64 PV128:$Rn), (v2posit64 PV128:$Rm)))]>;
 }
