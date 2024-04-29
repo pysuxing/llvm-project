@@ -1767,15 +1767,6 @@ def int_convert_from_posit16_1 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm
 def int_convert_to_posit32_3   : DefaultAttrsIntrinsic<[llvm_posit32_3_ty], [llvm_anyfloat_ty]>;
 def int_convert_from_posit32_3 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_posit32_3_ty]>;
 }
-// let IntrProperties = [IntrNoMem, Commutative] in {
-// def int_posit32_mul :  DefaultAttrsIntrinsic<[llvm_posit32_ty], [llvm_posit32_ty, llvm_posit32_ty]>;
-// }
-// let IntrProperties = [IntrNoMem] in {
-// def int_posit32_sub :  DefaultAttrsIntrinsic<[llvm_posit32_ty], [llvm_posit32_ty, llvm_posit32_ty]>;
-// def int_posit32_div :  DefaultAttrsIntrinsic<[llvm_posit32_ty], [llvm_posit32_ty, llvm_posit32_ty]>;
-// def int_posit32_mla :  DefaultAttrsIntrinsic<[llvm_posit32_ty], [llvm_posit32_ty, llvm_posit32_ty, llvm_posit32_ty]>;
-// def int_posit32_mls :  DefaultAttrsIntrinsic<[llvm_posit32_ty], [llvm_posit32_ty, llvm_posit32_ty, llvm_posit32_ty]>;
-// }
 
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
