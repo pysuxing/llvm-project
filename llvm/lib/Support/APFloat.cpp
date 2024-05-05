@@ -143,9 +143,7 @@ static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
 
 static constexpr fltSemantics semPosit16 = {15, -14, 11, 16}; // POSITFIXME
-static constexpr fltSemantics semPosit16_1 = {15, -14, 11, 16};
 static constexpr fltSemantics semPosit32 = {127, -126, 24, 32};
-static constexpr fltSemantics semPosit32_3 = {127, -126, 24, 32};
 static constexpr fltSemantics semPosit64 = {1023, -1022, 53, 64};
 /* The IBM double-double semantics. Such a number consists of a pair of IEEE
    64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
@@ -205,10 +203,6 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return Posit32();
   case S_Posit64:
     return Posit64();
-  case S_Posit16_1:
-    return Posit16_1();
-  case S_Posit32_3:
-    return Posit32_3();
   case S_Float8E5M2:
     return Float8E5M2();
   case S_Float8E5M2FNUZ:
@@ -247,10 +241,6 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_Posit32;
   else if (&Sem == &llvm::APFloat::Posit64())
     return S_Posit64;
-  else if (&Sem == &llvm::APFloat::Posit16_1())
-    return S_Posit16_1;
-  else if (&Sem == &llvm::APFloat::Posit32_3())
-    return S_Posit32_3;
   else if (&Sem == &llvm::APFloat::Float8E5M2())
     return S_Float8E5M2;
   else if (&Sem == &llvm::APFloat::Float8E5M2FNUZ())
@@ -280,8 +270,6 @@ const fltSemantics &APFloatBase::PPCDoubleDouble() {
 const fltSemantics &APFloatBase::Posit16() { return semPosit16; }
 const fltSemantics &APFloatBase::Posit32() { return semPosit32; }
 const fltSemantics &APFloatBase::Posit64() { return semPosit64; }
-const fltSemantics &APFloatBase::Posit16_1() { return semPosit16_1; }
-const fltSemantics &APFloatBase::Posit32_3() { return semPosit32_3; }
 const fltSemantics &APFloatBase::Float8E5M2() { return semFloat8E5M2; }
 const fltSemantics &APFloatBase::Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
 const fltSemantics &APFloatBase::Float8E4M3FN() { return semFloat8E4M3FN; }
@@ -3684,12 +3672,8 @@ APInt IEEEFloat::bitcastToAPInt() const {
   // POSITFIXME
   if (semantics == (const llvm::fltSemantics *)&semPosit16)
     return convertIEEEFloatToAPInt<semPosit16>();
-  if (semantics == (const llvm::fltSemantics *)&semPosit16_1)
-    return convertIEEEFloatToAPInt<semPosit16_1>();
   if (semantics == (const llvm::fltSemantics *)&semPosit32)
     return convertIEEEFloatToAPInt<semPosit32>();
-  if (semantics == (const llvm::fltSemantics *)&semPosit32_3)
-    return convertIEEEFloatToAPInt<semPosit32_3>();
   if (semantics == (const llvm::fltSemantics *)&semPosit64)
     return convertIEEEFloatToAPInt<semPosit64>();
 
@@ -3902,6 +3886,7 @@ void IEEEFloat::initFromFloatTF32APInt(const APInt &api) {
 
 /// Treat api as containing the bits of a floating point number.
 void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
+  // POSITFIXME
   assert(api.getBitWidth() == Sem->sizeInBits);
   if (Sem == &semIEEEhalf)
     return initFromHalfAPInt(api);
@@ -3935,10 +3920,6 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloatAPInt(api);
   if (Sem == &semPosit64)
     return initFromDoubleAPInt(api);
-  if (Sem == &semPosit16_1)
-    return initFromHalfAPInt(api);
-  if (Sem == &semPosit32_3)
-    return initFromFloatAPInt(api);
 
   llvm_unreachable(nullptr);
 }

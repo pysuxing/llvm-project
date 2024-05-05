@@ -569,8 +569,6 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   case Type::Posit16TyID:   OS << "posit16"; return;
   case Type::Posit32TyID:   OS << "posit32"; return;
   case Type::Posit64TyID:   OS << "posit64"; return;
-  case Type::Posit16_1TyID: OS << "posit16_1"; return;
-  case Type::Posit32_3TyID: OS << "posit32_3"; return;
   case Type::LabelTyID:     OS << "label"; return;
   case Type::MetadataTyID:  OS << "metadata"; return;
   case Type::X86_MMXTyID:   OS << "x86_mmx"; return;
@@ -1482,6 +1480,7 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
   // fixed number of hex digits.
   Out << "0x";
   APInt API = APF.bitcastToAPInt();
+  // POSITFIXME
   if (&APF.getSemantics() == &APFloat::x87DoubleExtended()) {
     Out << 'K';
     Out << format_hex_no_prefix(API.getHiBits(16).getZExtValue(), 4,
@@ -1508,13 +1507,11 @@ static void WriteAPFloatInternal(raw_ostream &Out, const APFloat &APF) {
     Out << 'R';
     Out << format_hex_no_prefix(API.getZExtValue(), 4,
                                 /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::Posit16() or
-             &APF.getSemantics() == &APFloat::Posit16_1()) {
+  } else if (&APF.getSemantics() == &APFloat::Posit16()) {
     Out << 'P';
     Out << format_hex_no_prefix(API.getZExtValue(), 4,
                                 /*Upper=*/true);
-  } else if (&APF.getSemantics() == &APFloat::Posit32() or
-             &APF.getSemantics() == &APFloat::Posit32_3()) {
+  } else if (&APF.getSemantics() == &APFloat::Posit32()) {
     Out << 'Q';
     Out << format_hex_no_prefix(API.getZExtValue(), 8,
                                 /*Upper=*/true);

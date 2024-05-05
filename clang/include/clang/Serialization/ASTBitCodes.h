@@ -1076,11 +1076,9 @@ enum PredefinedTypeIDs {
   PREDEF_TYPE_POSIT16_ID = 74,
   PREDEF_TYPE_POSIT32_ID = 75,
   PREDEF_TYPE_POSIT64_ID = 76,
-  PREDEF_TYPE_POSIT16_1_ID = 77,
-  PREDEF_TYPE_POSIT32_3_ID = 78,
 
   /// \brief The '__ibm128' type
-  PREDEF_TYPE_IBM128_ID = 79,
+  PREDEF_TYPE_IBM128_ID = 77,
 
 /// OpenCL image types with auto numeration
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
@@ -1110,7 +1108,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 507;
+const unsigned NUM_PREDEF_TYPE_IDS = 505;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.

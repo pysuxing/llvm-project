@@ -46,8 +46,6 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case Posit16TyID   : return getPosit16Ty(C);
   case Posit32TyID   : return getPosit32Ty(C);
   case Posit64TyID   : return getPosit64Ty(C);
-  case Posit16_1TyID : return getPosit16_1Ty(C);
-  case Posit32_3TyID : return getPosit32_3Ty(C);
   case LabelTyID     : return getLabelTy(C);
   case MetadataTyID  : return getMetadataTy(C);
   case X86_MMXTyID   : return getX86_MMXTy(C);
@@ -84,8 +82,6 @@ const fltSemantics &Type::getFltSemantics() const {
   case Posit16TyID: return APFloat::Posit16();
   case Posit32TyID: return APFloat::Posit32();
   case Posit64TyID: return APFloat::Posit64();
-  case Posit16_1TyID: return APFloat::Posit16_1();
-  case Posit32_3TyID: return APFloat::Posit32_3();
   default: llvm_unreachable("Invalid floating type");
   }
 }
@@ -120,10 +116,6 @@ Type *Type::getFloatingPointTy(LLVMContext &C, const fltSemantics &S) {
     Ty = Type::getPosit32Ty(C);
   else if (&S == &APFloat::Posit64())
     Ty = Type::getPosit64Ty(C);
-  else if (&S == &APFloat::Posit16_1())
-    Ty = Type::getPosit16_1Ty(C);
-  else if (&S == &APFloat::Posit32_3())
-    Ty = Type::getPosit32_3Ty(C);
   else {
     assert(&S == &APFloat::PPCDoubleDouble() && "Unknown FP format");
     Ty = Type::getPPC_FP128Ty(C);
@@ -200,10 +192,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   case Type::PPC_FP128TyID:
     return TypeSize::getFixed(128);
   case Type::Posit16TyID:
-  case Type::Posit16_1TyID:
     return TypeSize::getFixed(16);
   case Type::Posit32TyID:
-  case Type::Posit32_3TyID:
     return TypeSize::getFixed(32);
   case Type::Posit64TyID:
     return TypeSize::getFixed(64);
@@ -244,8 +234,6 @@ int Type::getFPMantissaWidth() const {
   if (getTypeID() == Posit16TyID) return 11; // POSITFIXME
   if (getTypeID() == Posit32TyID) return 24;
   if (getTypeID() == Posit64TyID) return 53;
-  if (getTypeID() == Posit16_1TyID) return 11;
-  if (getTypeID() == Posit32_3TyID) return 24;
   assert(getTypeID() == PPC_FP128TyID && "unknown fp type");
   return -1;
 }
@@ -281,8 +269,6 @@ Type *Type::getPPC_FP128Ty(LLVMContext &C) { return &C.pImpl->PPC_FP128Ty; }
 Type *Type::getPosit16Ty(LLVMContext &C) { return &C.pImpl->Posit16Ty; }
 Type *Type::getPosit32Ty(LLVMContext &C) { return &C.pImpl->Posit32Ty; }
 Type *Type::getPosit64Ty(LLVMContext &C) { return &C.pImpl->Posit64Ty; }
-Type *Type::getPosit16_1Ty(LLVMContext &C) { return &C.pImpl->Posit16_1Ty; }
-Type *Type::getPosit32_3Ty(LLVMContext &C) { return &C.pImpl->Posit32_3Ty; }
 Type *Type::getX86_MMXTy(LLVMContext &C) { return &C.pImpl->X86_MMXTy; }
 Type *Type::getX86_AMXTy(LLVMContext &C) { return &C.pImpl->X86_AMXTy; }
 

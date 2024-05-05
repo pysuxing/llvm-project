@@ -381,8 +381,6 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::Posit16TyID:
   case Type::Posit32TyID:
   case Type::Posit64TyID:
-  case Type::Posit16_1TyID:
-  case Type::Posit32_3TyID:
     return ConstantFP::get(Ty->getContext(),
                            APFloat::getZero(Ty->getFltSemantics()));
   case Type::PointerTyID:
@@ -1656,18 +1654,6 @@ bool ConstantFP::isValueValidForType(Type *Ty, const APFloat& Val) {
     if (&Val2.getSemantics() == &APFloat::Posit64())
       return true;
     Val2.convert(APFloat::Posit64(), APFloat::rmNearestTiesToEven, &losesInfo);
-    return !losesInfo;
-  }
-  case Type::Posit16_1TyID: {
-    if (&Val2.getSemantics() == &APFloat::Posit16_1())
-      return true;
-    Val2.convert(APFloat::Posit16_1(), APFloat::rmNearestTiesToEven, &losesInfo);
-    return !losesInfo;
-  }
-  case Type::Posit32_3TyID: {
-    if (&Val2.getSemantics() == &APFloat::Posit32_3())
-      return true;
-    Val2.convert(APFloat::Posit32_3(), APFloat::rmNearestTiesToEven, &losesInfo);
     return !losesInfo;
   }
   case Type::X86_FP80TyID:

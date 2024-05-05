@@ -173,8 +173,6 @@ std::string EVT::getEVTString() const {
   case MVT::posit16:   return "posit16";
   case MVT::posit32:   return "posit32";
   case MVT::posit64:   return "posit64";
-  case MVT::posit16_1: return "posit16_1";
-  case MVT::posit32_3: return "posit32_3";
   case MVT::bf16:      return "bf16";
   case MVT::ppcf128:   return "ppcf128";
   case MVT::isVoid:    return "isVoid";
@@ -229,8 +227,6 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::posit16: return Type::getPosit16Ty(Context);
   case MVT::posit32: return Type::getPosit32Ty(Context);
   case MVT::posit64: return Type::getPosit64Ty(Context);
-  case MVT::posit16_1: return Type::getPosit16_1Ty(Context);
-  case MVT::posit32_3: return Type::getPosit32_3Ty(Context);
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
   case MVT::aarch64svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
@@ -502,22 +498,6 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getPosit64Ty(Context), 4);
   case MVT::v8posit64:
     return FixedVectorType::get(Type::getPosit64Ty(Context), 8);
-  case MVT::v1posit16_1:
-    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 1);
-  case MVT::v2posit16_1:
-    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 2);
-  case MVT::v4posit16_1:
-    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 4);
-  case MVT::v8posit16_1:
-    return FixedVectorType::get(Type::getPosit16_1Ty(Context), 8);
-  case MVT::v1posit32_3:
-    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 1);
-  case MVT::v2posit32_3:
-    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 2);
-  case MVT::v4posit32_3:
-    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 4);
-  case MVT::v8posit32_3:
-    return FixedVectorType::get(Type::getPosit32_3Ty(Context), 8);
   case MVT::nxv1i1:
     return ScalableVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::nxv2i1:
@@ -663,8 +643,6 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::Posit16TyID:   return MVT(MVT::posit16);
   case Type::Posit32TyID:   return MVT(MVT::posit32);
   case Type::Posit64TyID:   return MVT(MVT::posit64);
-  case Type::Posit16_1TyID: return MVT(MVT::posit16_1);
-  case Type::Posit32_3TyID: return MVT(MVT::posit32_3);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
   case Type::PointerTyID:   return MVT(MVT::iPTR);
   case Type::FixedVectorTyID:

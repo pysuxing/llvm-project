@@ -77,9 +77,7 @@ enum class FloatModeKind {
   posit16 = 1 << 5,
   posit32 = 1 << 6,
   posit64 = 1 << 7,
-  posit16_1 = 1 << 8,
-  posit32_3 = 1 << 9,
-  Ibm128 = 1 << 10,
+  Ibm128 = 1 << 8,
   LLVM_MARK_AS_BITMASK_ENUM(Ibm128)
 };
 
@@ -98,8 +96,6 @@ struct TransferrableTargetInfo {
   unsigned char Posit16With, Posit16Align;
   unsigned char Posit32With, Posit32Align;
   unsigned char Posit64With, Posit64Align;
-  unsigned char Posit16_1With, Posit16_1Align;
-  unsigned char Posit32_3With, Posit32_3Align;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
@@ -141,7 +137,7 @@ struct TransferrableTargetInfo {
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
       *DoubleFormat, *LongDoubleFormat, *Float128Format, *Ibm128Format,
-      *Posit16Format, *Posit32Format, *Posit64Format, *Posit16_1Format, *Posit32_3Format;
+      *Posit16Format, *Posit32Format, *Posit64Format;
 
   ///===---- Target Data Type Query Methods -------------------------------===//
   enum IntType {
@@ -797,12 +793,6 @@ public:
   unsigned getPosit64Width() const { return Posit64With; }
   unsigned getPosit64Align() const { return Posit64Align; }
   const llvm::fltSemantics &getPosit64Format() const { return *Posit64Format; }
-  unsigned getPosit16_1Width() const { return Posit16_1With; }
-  unsigned getPosit16_1Align() const { return Posit16_1Align; }
-  const llvm::fltSemantics &getPosit16_1Format() const { return *Posit16_1Format; }
-  unsigned getPosit32_3Width() const { return Posit32_3With; }
-  unsigned getPosit32_3Align() const { return Posit32_3Align; }
-  const llvm::fltSemantics &getPosit32_3Format() const { return *Posit32_3Format; }
 
   /// Return the mangled code of long double.
   virtual const char *getLongDoubleMangling() const { return "e"; }

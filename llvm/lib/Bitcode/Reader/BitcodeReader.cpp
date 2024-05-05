@@ -2374,12 +2374,6 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_POSIT64:
       ResultTy = Type::getPosit64Ty(Context);
       break;
-    case bitc::TYPE_CODE_POSIT16_1:
-      ResultTy = Type::getPosit16_1Ty(Context);
-      break;
-    case bitc::TYPE_CODE_POSIT32_3:
-      ResultTy = Type::getPosit32_3Ty(Context);
-      break;
     case bitc::TYPE_CODE_LABEL:     // LABEL
       ResultTy = Type::getLabelTy(Context);
       break;

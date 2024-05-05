@@ -74,8 +74,6 @@ namespace clang {
     TST_posit16,
     TST_posit32,
     TST_posit64,
-    TST_posit16_1,
-    TST_posit32_3,
     TST_ibm128,
     TST_bool,       // _Bool
     TST_decimal32,  // _Decimal32

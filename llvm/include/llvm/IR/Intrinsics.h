@@ -121,8 +121,6 @@ namespace Intrinsic {
       Posit16,
       Posit32,
       Posit64,
-      Posit16_1,
-      Posit32_3,
       Quad,
       Integer,
       Vector,

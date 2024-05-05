@@ -187,8 +187,8 @@ namespace llvm {
     }
 
     bool isPosit() const {
-      return (SimpleTy >= MVT::posit16 && SimpleTy <= MVT::posit32_3) ||
-             (SimpleTy >= MVT::v1posit16 && SimpleTy <= MVT::v8posit32_3);
+      return (SimpleTy >= MVT::posit16 && SimpleTy <= MVT::posit64) ||
+             (SimpleTy >= MVT::v1posit16 && SimpleTy <= MVT::v8posit64);
     }
 
     MVT getPositAgentType() const {
@@ -197,36 +197,26 @@ namespace llvm {
       default:
         break;
       case MVT::posit16:
-      case MVT::posit16_1:
         return MVT::f16;
       case MVT::posit32:
-      case MVT::posit32_3:
         return MVT::f32;
       case MVT::posit64:
         return MVT::f64;
       case MVT::v1posit16:
-      case MVT::v1posit16_1:
         return MVT::v1f16;
       case MVT::v2posit16:
-      case MVT::v2posit16_1:
         return MVT::v2f16;
       case MVT::v4posit16:
-      case MVT::v4posit16_1:
         return MVT::v4f16;
       case MVT::v8posit16:
-      case MVT::v8posit16_1:
         return MVT::v8f16;
       case MVT::v1posit32:
-      case MVT::v1posit32_3:
         return MVT::v1f32;
       case MVT::v2posit32:
-      case MVT::v2posit32_3:
         return MVT::v2f32;
       case MVT::v4posit32:
-      case MVT::v4posit32_3:
         return MVT::v4f32;
       case MVT::v8posit32:
-      case MVT::v8posit32_3:
         return MVT::v8f32;
       case MVT::v1posit64:
         return MVT::v1f64;

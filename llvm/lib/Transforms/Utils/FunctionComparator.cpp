@@ -531,8 +531,6 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
   case Type::Posit16TyID:
   case Type::Posit32TyID:
   case Type::Posit64TyID:
-  case Type::Posit16_1TyID:
-  case Type::Posit32_3TyID:
   case Type::PPC_FP128TyID:
   case Type::LabelTyID:
   case Type::MetadataTyID:

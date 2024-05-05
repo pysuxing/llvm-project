@@ -823,8 +823,6 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   case Type::Posit16TyID:
   case Type::Posit32TyID:
   case Type::Posit64TyID:
-  case Type::Posit16_1TyID:
-  case Type::Posit32_3TyID:
   case Type::FP128TyID:
   case Type::X86_FP80TyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getFixedValue();

@@ -1288,14 +1288,6 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
       return Builder.CreateIntrinsic(DstElementTy,
                                      llvm::Intrinsic::convert_to_posit64, Src,
                                      nullptr, "conv");
-    if (DstElementTy->isPosit16_1Ty())
-      return Builder.CreateIntrinsic(DstElementTy,
-                                     llvm::Intrinsic::convert_to_posit16_1, Src,
-                                     nullptr, "conv");
-    if (DstElementTy->isPosit32_3Ty())
-      return Builder.CreateIntrinsic(DstElementTy,
-                                     llvm::Intrinsic::convert_to_posit32_3, Src,
-                                     nullptr, "conv");
   }
   if (SrcElementTy->isPositTy()) {
     assert(SrcElementTy != DstElementTy);
@@ -1317,14 +1309,6 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
       Dst = Builder.CreateIntrinsic(IntermediateTy,
                                     llvm::Intrinsic::convert_from_posit64, Src,
                                     nullptr, "conv");
-    else if (SrcElementTy->isPosit16_1Ty())
-      Dst = Builder.CreateIntrinsic(IntermediateTy,
-                                    llvm::Intrinsic::convert_from_posit16_1,
-                                    Src, nullptr, "conv");
-    else if (SrcElementTy->isPosit32_3Ty())
-      Dst = Builder.CreateIntrinsic(IntermediateTy,
-                                    llvm::Intrinsic::convert_from_posit32_3,
-                                    Src, nullptr, "conv");
     if (DstElementTy->isIntegerTy()) {
       Dst = DstElementType->isSignedIntegerOrEnumerationType()
                 ? Builder.CreateFPToSI(Dst, DstElementTy, "conv")
@@ -1363,6 +1347,7 @@ Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
       return Builder.CreateFPToSI(Src, DstTy, "conv");
     return Builder.CreateFPToUI(Src, DstTy, "conv");
   }
+
   if (DstElementTy->getTypeID() < SrcElementTy->getTypeID())
     return Builder.CreateFPTrunc(Src, DstTy, "conv");
   return Builder.CreateFPExt(Src, DstTy, "conv");

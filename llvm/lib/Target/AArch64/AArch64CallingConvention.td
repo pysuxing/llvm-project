@@ -101,22 +101,22 @@ defvar AArch64_Common = [
            CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
   CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16],
            CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
-  CCIfType<[posit16, posit16_1], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
-  CCIfType<[posit32, posit32_3], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
+  CCIfType<[posit16], CCAssignToReg<[H0, H1, H2, H3, H4, H5, H6, H7]>>,
+  CCIfType<[posit32], CCAssignToReg<[S0, S1, S2, S3, S4, S5, S6, S7]>>,
   CCIfType<[posit64], CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
-  CCIfType<[v1posit64, v2posit32, v2posit32_3, v4posit16, v4posit16_1],
+  CCIfType<[v1posit64, v2posit32, v4posit16],
            CCAssignToReg<[D0, D1, D2, D3, D4, D5, D6, D7]>>,
-  CCIfType<[v2posit64, v4posit32, v4posit32_3, v8posit16, v8posit16_1],
+  CCIfType<[v2posit64, v4posit32, v8posit16],
            CCAssignToReg<[Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7]>>,
 
   // If more than will fit in registers, pass them on the stack instead.
-  CCIfType<[i1, i8, i16, f16, bf16, posit16, posit16_1], CCAssignToStack<8, 8>>,
-  CCIfType<[i32, f32, posit32, posit32_3], CCAssignToStack<8, 8>>,
-  CCIfType<[i64, f64, posit64, v1f64, v2f32, v1i64, v2i32, v4i16, v8i8, v4f16, v4bf16,
-            v1posit64, v2posit32, v2posit32_3, v4posit16, v4posit16_1],
+  CCIfType<[i1, i8, i16, f16, bf16, posit16], CCAssignToStack<8, 8>>,
+  CCIfType<[i32, f32, posit32], CCAssignToStack<8, 8>>,
+  CCIfType<[i64, f64, v1f64, v2f32, v1i64, v2i32, v4i16, v8i8, v4f16, v4bf16,
+            posit64, v1posit64, v2posit32, v4posit16],
            CCAssignToStack<8, 8>>,
   CCIfType<[f128, v2i64, v4i32, v8i16, v16i8, v4f32, v2f64, v8f16, v8bf16,
-            v2posit64, v4posit32, v4posit32_3, v8posit16, v8posit16_1],
+            v2posit64, v4posit32, v8posit16],
            CCAssignToStack<16, 16>>
 ];
 

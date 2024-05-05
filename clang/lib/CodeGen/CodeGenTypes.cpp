@@ -235,10 +235,6 @@ static llvm::Type *getTypeForFormat(llvm::LLVMContext &VMContext,
     return llvm::Type::getPosit32Ty(VMContext);
   if (&format == &llvm::APFloat::Posit64())
     return llvm::Type::getPosit64Ty(VMContext);
-  if (&format == &llvm::APFloat::Posit16_1())
-    return llvm::Type::getPosit16_1Ty(VMContext);
-  if (&format == &llvm::APFloat::Posit32_3())
-    return llvm::Type::getPosit32_3Ty(VMContext);
   if (&format == &llvm::APFloat::x87DoubleExtended())
     return llvm::Type::getX86_FP80Ty(VMContext);
   llvm_unreachable("Unknown float format!");
@@ -427,8 +423,6 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::Posit16:
     case BuiltinType::Posit32:
     case BuiltinType::Posit64:
-    case BuiltinType::Posit16_1:
-    case BuiltinType::Posit32_3:
     case BuiltinType::Ibm128:
       ResultType = getTypeForFormat(getLLVMContext(),
                                     Context.getFloatTypeSemantics(T),

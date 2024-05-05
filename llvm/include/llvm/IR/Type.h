@@ -56,10 +56,8 @@ public:
     HalfTyID = 0,  ///< 16-bit floating point type
     BFloatTyID,    ///< 16-bit floating point type (7-bit significand)
     Posit16TyID,   ///< Posit 16
-    Posit16_1TyID, ///< Posit 16(1)
     FloatTyID,     ///< 32-bit floating point type
     Posit32TyID,   ///< Posit 32
-    Posit32_3TyID, ///< Posit 32(3)
     DoubleTyID,    ///< 64-bit floating point type
     Posit64TyID,   ///< Posit 64
     X86_FP80TyID,  ///< 80-bit floating point type (X87)
@@ -153,7 +151,7 @@ public:
   /// Return true if this is a 16-bit float type.
   bool is16bitFPTy() const {
     return getTypeID() == BFloatTyID || getTypeID() == HalfTyID ||
-           getTypeID() == Posit16TyID || getTypeID() == Posit16_1TyID;
+           getTypeID() == Posit16TyID;
   }
 
   /// Return true if this is 'float', a 32-bit IEEE fp type.
@@ -174,12 +172,9 @@ public:
   bool isPosit16Ty() const { return getTypeID() == Posit16TyID; }
   bool isPosit32Ty() const { return getTypeID() == Posit32TyID; }
   bool isPosit64Ty() const { return getTypeID() == Posit64TyID; }
-  bool isPosit16_1Ty() const { return getTypeID() == Posit16_1TyID; }
-  bool isPosit32_3Ty() const { return getTypeID() == Posit32_3TyID; }
   bool isPositTy() const {
     auto Id = getTypeID();
-    return Id == Posit16TyID || Id == Posit32TyID || Id == Posit64TyID ||
-           Id == Posit16_1TyID || Id == Posit32_3TyID;
+    return Id == Posit16TyID || Id == Posit32TyID || Id == Posit64TyID;
   }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
@@ -201,7 +196,7 @@ public:
   /// Return true if this is one of the floating-point types
   bool isFloatingPointTy() const {
     return isIEEELikeFPTy() || getTypeID() == X86_FP80TyID ||
-           getTypeID() == PPC_FP128TyID || isPositTy();
+           getTypeID() == PPC_FP128TyID;
   }
 
   /// Returns true if this is a floating-point type that is an unevaluated sum
@@ -472,8 +467,6 @@ public:
   static Type *getPosit16Ty(LLVMContext &C);
   static Type *getPosit32Ty(LLVMContext &C);
   static Type *getPosit64Ty(LLVMContext &C);
-  static Type *getPosit16_1Ty(LLVMContext &C);
-  static Type *getPosit32_3Ty(LLVMContext &C);
   static Type *getPPC_FP128Ty(LLVMContext &C);
   static Type *getX86_MMXTy(LLVMContext &C);
   static Type *getX86_AMXTy(LLVMContext &C);

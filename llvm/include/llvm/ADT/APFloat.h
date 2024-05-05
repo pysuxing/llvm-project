@@ -158,8 +158,6 @@ struct APFloatBase {
     S_Posit16,
     S_Posit32,
     S_Posit64,
-    S_Posit16_1,
-    S_Posit32_3,
     // 8-bit floating point number following IEEE-754 conventions with bit
     // layout S1E5M2 as described in https://arxiv.org/abs/2209.05433.
     S_Float8E5M2,
@@ -210,8 +208,6 @@ struct APFloatBase {
   static const fltSemantics &Posit16() LLVM_READNONE;
   static const fltSemantics &Posit32() LLVM_READNONE;
   static const fltSemantics &Posit64() LLVM_READNONE;
-  static const fltSemantics &Posit16_1() LLVM_READNONE;
-  static const fltSemantics &Posit32_3() LLVM_READNONE;
   static const fltSemantics &Float8E5M2() LLVM_READNONE;
   static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
   static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
@@ -630,8 +626,6 @@ private:
   APInt convertPosit16APFloatToAPInt() const;
   APInt convertPosit32APFloatToAPInt() const;
   APInt convertPosit64APFloatToAPInt() const;
-  APInt convertPosit16_1APFloatToAPInt() const;
-  APInt convertPosit32_3APFloatToAPInt() const;
   APInt convertFloat8E5M2APFloatToAPInt() const;
   APInt convertFloat8E5M2FNUZAPFloatToAPInt() const;
   APInt convertFloat8E4M3FNAPFloatToAPInt() const;

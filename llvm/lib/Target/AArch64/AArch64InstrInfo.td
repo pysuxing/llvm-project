@@ -4766,11 +4766,6 @@ defm PDIV   : TwoOperandPositData<0b01100, "pdiv", any_fdiv>;
 }
 defm PMLA   : ThreeOperandPositData<0b10100, "pmla", TriOpFrag<(any_fma node:$MHS, node:$RHS, node:$LHS)>>;
 defm PMLS   : ThreeOperandPositData<0b10101, "pmls", TriOpFrag<(any_fma node:$MHS, (fneg node:$RHS), node:$LHS)>>;
-defm PADDO  : TwoOperandPositDataOld<0b01001, "paddo", any_fadd>;
-let SchedRW = [WriteFMul] in {
-defm PMULO  : TwoOperandPositDataOld<0b01011, "pmulo", any_fmul>;
-}
-defm PMLAO  : ThreeOperandPositDataOld<0b10100, "pmlao", TriOpFrag<(any_fma node:$MHS, node:$RHS, node:$LHS)>>;
 
 defm PADD   : SIMDThreeSameVectorPosit<0b01001, "padd", any_fadd>;
 defm PSUB   : SIMDThreeSameVectorPosit<0b01010, "psub", any_fsub>;

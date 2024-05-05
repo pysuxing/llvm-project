@@ -571,10 +571,6 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMPosit32TypeKind;
   case Type::Posit64TyID:
     return LLVMPosit64TypeKind;
-  case Type::Posit16_1TyID:
-    return LLVMPosit16_1TypeKind;
-  case Type::Posit32_3TyID:
-    return LLVMPosit32_3TypeKind;
   case Type::LabelTyID:
     return LLVMLabelTypeKind;
   case Type::MetadataTyID:

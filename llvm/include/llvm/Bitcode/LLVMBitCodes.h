@@ -180,8 +180,6 @@ enum TypeCodes {
   TYPE_CODE_POSIT16 = 27,
   TYPE_CODE_POSIT32 = 28,
   TYPE_CODE_POSIT64 = 29,
-  TYPE_CODE_POSIT16_1 = 30,
-  TYPE_CODE_POSIT32_3 = 31,
 };
 
 enum OperandBundleTagCode {

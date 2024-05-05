@@ -272,8 +272,6 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::posit16: return "MVT::posit16";
   case MVT::posit32: return "MVT::posit32";
   case MVT::posit64: return "MVT::posit64";
-  case MVT::posit16_1: return "MVT::posit16_1";
-  case MVT::posit32_3: return "MVT::posit32_3";
   case MVT::v1posit16: return "MVT::v1posit16";
   case MVT::v2posit16: return "MVT::v2posit16";
   case MVT::v4posit16: return "MVT::v4posit16";
@@ -286,14 +284,6 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v2posit64: return "MVT::v2posit64";
   case MVT::v4posit64: return "MVT::v4posit64";
   case MVT::v8posit64: return "MVT::v8posit64";
-  case MVT::v1posit16_1: return "MVT::v1posit16_1";
-  case MVT::v2posit16_1: return "MVT::v2posit16_1";
-  case MVT::v4posit16_1: return "MVT::v4posit16_1";
-  case MVT::v8posit16_1: return "MVT::v8posit16_1";
-  case MVT::v1posit32_3: return "MVT::v1posit32_3";
-  case MVT::v2posit32_3: return "MVT::v2posit32_3";
-  case MVT::v4posit32_3: return "MVT::v4posit32_3";
-  case MVT::v8posit32_3: return "MVT::v8posit32_3";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
   // clang-format on
