@@ -468,7 +468,7 @@ def PFPR32 : RegisterClass<"AArch64", [posit32, posit32_3], 32,(sequence "S%u", 
 def PFPR64 : RegisterClass<"AArch64", [posit64], 64, (sequence "D%u", 0, 31)>;
 
 def PFPR128 : RegisterClass<"AArch64",
-                           [v8posit16, v8posit16_1, v4posit32, v4posit32, v2posit64],
+                           [v8posit16, v8posit16_1, v4posit32, v4posit32_3, v2posit64],
                            128, (sequence "Q%u", 0, 31)>;
 
 // We don't (yet) have an f128 legal type, so don't use that here. We
