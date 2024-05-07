@@ -68,6 +68,9 @@ enum class fltNonfiniteBehavior {
   // `fltNanEncoding` enum. We treat all NaNs as quiet, as the available
   // encodings do not distinguish between signalling and quiet NaN.
   NanOnly,
+
+  // The Posit format treat an AllOnes pattern as +/- Inf
+  Posit,
 };
 
 // How NaN values are represented. This is curently only used in combination
@@ -93,6 +96,9 @@ enum class fltNanEncoding {
   // there is only one NaN value, it is treated as quiet NaN. This matches the
   // behavior described in https://arxiv.org/abs/2206.02915 .
   NegativeZero,
+
+  // The Posit format does not encode NaN values
+  Posit,
 };
 
 /* Represents floating point arithmetic semantics.  */
@@ -115,6 +121,10 @@ struct fltSemantics {
   fltNonfiniteBehavior nonFiniteBehavior = fltNonfiniteBehavior::IEEE754;
 
   fltNanEncoding nanEncoding = fltNanEncoding::IEEE;
+
+  /* Length of the regime field, only meaningful for the Posit format */
+  // unsigned regime = 0; // POSITFIXME this is not statically known
+
   // Returns true if any number described by this semantics can be precisely
   // represented by the specified semantics. Does not take into account
   // the value of fltNonfiniteBehavior.
@@ -142,9 +152,12 @@ static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
 static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
 
-static constexpr fltSemantics semPosit16 = {15, -14, 11, 16}; // POSITFIXME
-static constexpr fltSemantics semPosit32 = {127, -126, 24, 32};
-static constexpr fltSemantics semPosit64 = {1023, -1022, 53, 64};
+static constexpr fltSemantics semPosit16 = {
+    15, -14, 11, 16, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+static constexpr fltSemantics semPosit32 = {
+    127, -126, 24, 32, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+static constexpr fltSemantics semPosit64 = {
+    1023, -1022, 53, 64, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
 /* The IBM double-double semantics. Such a number consists of a pair of IEEE
    64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
    (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
