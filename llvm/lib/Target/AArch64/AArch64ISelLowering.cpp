@@ -5377,6 +5377,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::convert_to_posit32:
     return DAG.getNode(AArch64ISD::PCVTFP, dl, Op->getVTList(), Op.getOperand(1));
   case Intrinsic::convert_from_posit32:
+    // POSITFIXME only support posit32->double convertion
     return DAG.getNode(AArch64ISD::PCVTPF, dl, Op->getVTList(), Op.getOperand(1));
   // case Intrinsic::convert_to_posit64:
   //   return DAG.getNode(AArch64ISD::PCVTFP, dl, Op->getVTList(), Op.getOperand(1));

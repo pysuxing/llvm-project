@@ -4752,10 +4752,12 @@ def PCVTFPS : BasePositConvert<0b10001, 0b00, PFPR32, FPR32, "pcvtfp",
                                [(set (posit32 PFPR32:$Rd), (AArch64pcvtfp (f32 FPR32:$Rn)))]>;
 def PCVTFPD : BasePositConvert<0b10001, 0b01, PFPR32, FPR64, "pcvtfp",
                                [(set (posit32 PFPR32:$Rd), (AArch64pcvtfp (f64 FPR64:$Rn)))]>;
-def PCVTPFS : BasePositConvert<0b01110, 0b00, FPR32, PFPR32, "pcvtpf",
-                               [(set (f32 FPR32:$Rd), (AArch64pcvtpf (posit32 PFPR32:$Rn)))]>;
-def PCVTPFD : BasePositConvert<0b01110, 0b01, FPR64, PFPR32, "pcvtpf",
-                               [(set (f64 FPR64:$Rd), (AArch64pcvtpf (posit32 PFPR32:$Rn)))]>;
+// def PCVTPFS : BasePositConvert<0b01110, 0b00, FPR32, PFPR32, "pcvtpf",
+//                                [(set (f32 FPR32:$Rd), (AArch64pcvtpf (posit32 PFPR32:$Rn)))]>;
+// def PCVTPFD : BasePositConvert<0b01110, 0b01, FPR64, PFPR32, "pcvtpf",
+//                                [(set (f64 FPR64:$Rd), (AArch64pcvtpf (posit32 PFPR32:$Rn)))]>;
+def PCVTPFD : SIMDPositConvert<0b10000, 0, FPR64, PFPR32, "pcvtpfd",
+                                [(set (f64 FPR64:$Rd), (AArch64pcvtpf (posit32 PFPR32:$Rn)))]>;
 defm PADD   : TwoOperandPositData<0b01001, "padd", any_fadd>;
 defm PSUB   : TwoOperandPositData<0b01010, "psub", any_fsub>;
 let SchedRW = [WriteFMul] in {

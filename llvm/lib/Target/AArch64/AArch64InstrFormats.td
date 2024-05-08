@@ -5563,6 +5563,27 @@ class BasePositConvert<bits<5> opcode, bits<2> ty,
   let Predicates = [HasPosit];
 }
 
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1 in
+class SIMDPositConvert<bits<5> opcode, bits<1> highlow,
+                       RegisterClass outregtype, RegisterClass inregtype,
+                       string asm, list<dag> pat>
+    : I<(outs outregtype:$Rd), (ins inregtype:$Rn), asm, "\t$Rd, $Rn", "", pat>,
+      Sched<[WriteF]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  let Inst{31} = 1;
+  let Inst{30} = highlow;
+  let Inst{29-24} = 0b101110;
+  let Inst{23-22} = 00;
+  let Inst{21}    = 0;
+  let Inst{20-16} = 0;
+  let Inst{15}    = 0;
+  let Inst{14-10} = opcode;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+  let Predicates = [HasPosit];
+}
+
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
 class BaseTwoOperandFPData<bits<4> opcode, RegisterClass regtype,
                            string asm, list<dag> pat>
