@@ -258,6 +258,7 @@ struct APFloatBase {
     opInexact = 0x10
   };
 
+  // POSITFIXE do we need an NAR?
   /// Category of internally-represented number.
   enum fltCategory {
     fcInfinity,

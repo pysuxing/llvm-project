@@ -153,11 +153,11 @@ static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
 
 static constexpr fltSemantics semPosit16 = {
-    15, -14, 11, 16, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+    56, -56, 0, 16, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
 static constexpr fltSemantics semPosit32 = {
-    127, -126, 24, 32, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+    120, -120, 0, 32, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
 static constexpr fltSemantics semPosit64 = {
-    1023, -1022, 53, 64, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+    504, -504, 0, 64, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
 /* The IBM double-double semantics. Such a number consists of a pair of IEEE
    64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
    (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
@@ -363,6 +363,7 @@ unsigned APFloatBase::getSizeInBits(const fltSemantics &Sem) {
   return Sem.sizeInBits;
 }
 
+// POSITFIXME may need fix this for posit as posit's exponent field are not biased
 static constexpr APFloatBase::ExponentType
 exponentZero(const fltSemantics &semantics) {
   return semantics.minExponent - 1;
