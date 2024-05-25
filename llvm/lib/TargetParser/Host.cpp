@@ -263,9 +263,9 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
       .Case("0xd01", "tsv110")
       .Default("generic");
 
-  if (Implementer == "0x70") // Feiteng
+  if (Implementer == "0x00") // Xiangjiang prototype
     return StringSwitch<const char *>(Part)
-      .Case("0x880", "xiangjiang") // POSITFIXME
+      .Case("0x680", "xiangjiang") // POSITFIXME
       .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
