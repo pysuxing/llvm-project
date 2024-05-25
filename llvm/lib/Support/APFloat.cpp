@@ -153,11 +153,11 @@ static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
 
 static constexpr fltSemantics semPosit16 = {
-    56, -56, 0, 16, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+    56, -56, 11, 16, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
 static constexpr fltSemantics semPosit32 = {
-    120, -120, 0, 32, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+    120, -120, 24, 32, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
 static constexpr fltSemantics semPosit64 = {
-    504, -504, 0, 64, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
+    504, -504, 53, 64, fltNonfiniteBehavior::Posit, fltNanEncoding::Posit};
 /* The IBM double-double semantics. Such a number consists of a pair of IEEE
    64-bit doubles (Hi, Lo), where |Hi| > |Lo|, and if normal,
    (double)(Hi + Lo) == Hi. The numeric value it's modeling is Hi + Lo.
@@ -320,6 +320,9 @@ const unsigned int maxPowerOfFiveParts =
     2 +
     ((maxPowerOfFiveExponent * 815) / (351 * APFloatBase::integerPartWidth));
 
+// POSITFIXME this is used in many places, e.g., check if a conversion is
+// possible, we must redesign this for the variable sized mantissa for posits.
+// Maybe an overload semanticsPrecision(const fltSemantics &semantics, double value)?
 unsigned int APFloatBase::semanticsPrecision(const fltSemantics &semantics) {
   return semantics.precision;
 }
