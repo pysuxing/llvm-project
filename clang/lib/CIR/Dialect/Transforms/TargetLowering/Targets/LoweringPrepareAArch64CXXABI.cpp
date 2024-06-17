@@ -12,7 +12,9 @@
 //
 //===------------------------------------------------------------------===//
 
-#include "LoweringPrepareItaniumCXXABI.h"
+// TODO(cir): Refactor this to follow some level of codegen parity.
+
+#include "../LoweringPrepareItaniumCXXABI.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -166,6 +168,16 @@ mlir::Value LoweringPrepareAArch64CXXABI::lowerAAPCSVAArg(
                                       maybeRegBlock);
 
   auto contBlock = currentBlock->splitBlock(op);
+  // now contBlock should be the block after onStackBlock in CFG.
+  // This is essential, considering the case where originally currentBlock
+  // was the only block in the region. By splitting the block, and added
+  // above blocks, really the rear block in the region should be contBlock,
+  // not onStackBlock, but splitBlock would just insert contBlock after
+  // currentBlock, so we need to move it.
+  auto contBlockIter = contBlock->getIterator();
+  contBlock->getParent()->getBlocks().remove(contBlockIter);
+  onStackBlock->getParent()->getBlocks().insertAfter(
+      mlir::Region::iterator(onStackBlock), contBlock);
 
   // Otherwise, at least some kind of argument could go in these registers, the
   // question is whether this particular type is too big.

@@ -177,10 +177,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
     sob = sob::SignedOverflowBehavior::trapping;
     break;
   }
+
+  // FIXME(cir): Implement a custom CIR Module Op and attributes to leverage
+  // MLIR features.
   theModule->setAttr("cir.sob",
                      mlir::cir::SignedOverflowBehaviorAttr::get(&context, sob));
   theModule->setAttr(
       "cir.lang", mlir::cir::LangAttr::get(&context, getCIRSourceLanguage()));
+  theModule->setAttr("cir.triple", builder.getStringAttr(getTriple().str()));
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.
@@ -1713,8 +1717,8 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
       builder.setInsertionPoint(noProtoCallOp);
 
       // Patch call type with the real function type.
-      auto realCallOp = builder.create<mlir::cir::CallOp>(
-          noProtoCallOp.getLoc(), NewFn, noProtoCallOp.getOperands());
+      auto realCallOp = builder.createCallOp(noProtoCallOp.getLoc(), NewFn,
+                                             noProtoCallOp.getOperands());
 
       // Replace old no proto call with fixed call.
       noProtoCallOp.replaceAllUsesWith(realCallOp);
@@ -2734,6 +2738,7 @@ mlir::cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
     // Replace occurrences of the old variable if needed.
     GV.setName(OldGV.getName());
     if (!OldGV->use_empty()) {
+      // TODO(cir): remove erase call above and use replaceGlobal here.
       llvm_unreachable("NYI");
     }
     OldGV->erase();

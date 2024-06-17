@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -328,6 +329,15 @@ public:
     return createBitcast(src, getPointerTo(newPointeeTy));
   }
 
+  mlir::Value createAddrSpaceCast(mlir::Location loc, mlir::Value src,
+                                  mlir::Type newTy) {
+    return createCast(loc, mlir::cir::CastKind::address_space, src, newTy);
+  }
+
+  mlir::Value createAddrSpaceCast(mlir::Value src, mlir::Type newTy) {
+    return createAddrSpaceCast(src.getLoc(), src, newTy);
+  }
+
   mlir::Value createPtrIsNull(mlir::Value ptr) {
     return createNot(createPtrToBoolCast(ptr));
   }
@@ -391,6 +401,7 @@ public:
 
   // Creates constant nullptr for pointer type ty.
   mlir::cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    assert(!MissingFeatures::targetCodeGenInfoGetNullPointer());
     return create<mlir::cir::ConstantOp>(loc, ty, getConstPtrAttr(ty, 0));
   }
 
@@ -403,6 +414,57 @@ public:
   mlir::cir::YieldOp createYield(mlir::Location loc,
                                  mlir::ValueRange value = {}) {
     return create<mlir::cir::YieldOp>(loc, value);
+  }
+
+  mlir::cir::CallOp
+  createCallOp(mlir::Location loc,
+               mlir::SymbolRefAttr callee = mlir::SymbolRefAttr(),
+               mlir::Type returnType = mlir::cir::VoidType(),
+               mlir::ValueRange operands = mlir::ValueRange(),
+               mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
+
+    mlir::cir::CallOp callOp =
+        create<mlir::cir::CallOp>(loc, callee, returnType, operands);
+
+    if (extraFnAttr) {
+      callOp->setAttr("extra_attrs", extraFnAttr);
+    } else {
+      mlir::NamedAttrList empty;
+      callOp->setAttr("extra_attrs",
+                      mlir::cir::ExtraFuncAttributesAttr::get(
+                          getContext(), empty.getDictionary(getContext())));
+    }
+    return callOp;
+  }
+
+  mlir::cir::CallOp
+  createCallOp(mlir::Location loc, mlir::cir::FuncOp callee,
+               mlir::ValueRange operands = mlir::ValueRange(),
+               mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
+                        callee.getFunctionType().getReturnType(), operands,
+                        extraFnAttr);
+  }
+
+  mlir::cir::CallOp
+  createIndirectCallOp(mlir::Location loc, mlir::Value ind_target,
+                       mlir::cir::FuncType fn_type,
+                       mlir::ValueRange operands = mlir::ValueRange(),
+                       mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
+
+    llvm::SmallVector<mlir::Value, 4> resOperands({ind_target});
+    resOperands.append(operands.begin(), operands.end());
+
+    return createCallOp(loc, mlir::SymbolRefAttr(), fn_type.getReturnType(),
+                        resOperands, extraFnAttr);
+  }
+
+  mlir::cir::CallOp
+  createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
+               mlir::ValueRange operands = mlir::ValueRange(),
+               mlir::cir::ExtraFuncAttributesAttr extraFnAttr = {}) {
+    return createCallOp(loc, callee, mlir::cir::VoidType(), operands,
+                        extraFnAttr);
   }
 };
 

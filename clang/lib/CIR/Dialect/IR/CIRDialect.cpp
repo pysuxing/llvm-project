@@ -496,6 +496,15 @@ LogicalResult CastOp::verify() {
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
+  case cir::CastKind::address_space: {
+    auto srcPtrTy = srcType.dyn_cast<mlir::cir::PointerType>();
+    auto resPtrTy = resType.dyn_cast<mlir::cir::PointerType>();
+    if (!srcPtrTy || !resPtrTy)
+      return emitOpError() << "requires !cir.ptr type for source and result";
+    if (srcPtrTy.getPointee() != resPtrTy.getPointee())
+      return emitOpError() << "requires two types differ in addrspace only";
+    return success();
+  }
   }
 
   llvm_unreachable("Unknown CastOp kind?");
@@ -514,7 +523,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
       return foldResults[0].get<mlir::Attribute>();
     return {};
   }
-  case mlir::cir::CastKind::bitcast: {
+  case mlir::cir::CastKind::bitcast:
+  case mlir::cir::CastKind::address_space: {
     return getSrc();
   }
   default:
@@ -934,6 +944,42 @@ mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
 
 Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
 
+/// Removes branches between two blocks if it is the only branch.
+///
+/// From:
+///   ^bb0:
+///     cir.br ^bb1
+///   ^bb1:  // pred: ^bb0
+///     cir.return
+///
+/// To:
+///   ^bb0:
+///     cir.return
+LogicalResult BrOp::fold(FoldAdaptor adaptor,
+                         SmallVectorImpl<OpFoldResult> &results) {
+  Block *block = getOperation()->getBlock();
+  Block *dest = getDest();
+
+  if (isa<mlir::cir::LabelOp>(dest->front())) {
+    return failure();
+  }
+
+  if (block->getNumSuccessors() == 1 && dest->getSinglePredecessor() == block) {
+    getOperation()->erase();
+    block->getOperations().splice(block->end(), dest->getOperations());
+    auto eraseBlock = [](Block *block) {
+      for (auto &op : llvm::make_early_inc_range(*block))
+        op.erase();
+      block->erase();
+    };
+    eraseBlock(dest);
+
+    return success();
+  }
+
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // BrCondOp
 //===----------------------------------------------------------------------===//
@@ -1003,7 +1049,8 @@ parseSwitchOp(OpAsmParser &parser,
     // 2. Get the value (next in list)
 
     // These needs to be in sync with CIROps.td
-    if (parser.parseOptionalKeyword(&attrStr, {"default", "equal", "anyof"})) {
+    if (parser.parseOptionalKeyword(&attrStr,
+                                    {"default", "equal", "anyof", "range"})) {
       ::mlir::StringAttr attrVal;
       ::mlir::OptionalParseResult parseResult = parser.parseOptionalAttribute(
           attrVal, parser.getBuilder().getNoneType(), "kind", attrStorage);
@@ -1016,8 +1063,9 @@ parseSwitchOp(OpAsmParser &parser,
 
     if (attrStr.empty()) {
       return parser.emitError(
-          loc, "expected string or keyword containing one of the following "
-               "enum values for attribute 'kind' [default, equal, anyof]");
+          loc,
+          "expected string or keyword containing one of the following "
+          "enum values for attribute 'kind' [default, equal, anyof, range]");
     }
 
     auto attrOptional = ::mlir::cir::symbolizeCaseOpKind(attrStr.str());
@@ -1042,6 +1090,7 @@ parseSwitchOp(OpAsmParser &parser,
       caseEltValueListAttr.push_back(mlir::cir::IntAttr::get(intCondType, val));
       break;
     }
+    case cir::CaseOpKind::Range:
     case cir::CaseOpKind::Anyof: {
       if (parser.parseComma().failed())
         return mlir::failure();
@@ -1129,7 +1178,7 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
     auto attr = casesAttr[idx].cast<CaseAttr>();
     auto kind = attr.getKind().getValue();
     assert((kind == CaseOpKind::Default || kind == CaseOpKind::Equal ||
-            kind == CaseOpKind::Anyof) &&
+            kind == CaseOpKind::Anyof || kind == CaseOpKind::Range) &&
            "unknown case");
 
     // Case kind
@@ -1144,6 +1193,10 @@ void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
       (intAttrTy.isSigned() ? p << intAttr.getSInt() : p << intAttr.getUInt());
       break;
     }
+    case cir::CaseOpKind::Range:
+      assert(attr.getValue().size() == 2 && "range must have two values");
+      // The print format of the range is the same as anyof
+      LLVM_FALLTHROUGH;
     case cir::CaseOpKind::Anyof: {
       p << ", [";
       llvm::interleaveComma(attr.getValue(), p, [&](const Attribute &a) {
@@ -2293,6 +2346,7 @@ verifyCallCommInSymbolUses(Operation *op, SymbolTableCollection &symbolTable) {
 
 static ::mlir::ParseResult parseCallCommon(
     ::mlir::OpAsmParser &parser, ::mlir::OperationState &result,
+    llvm::StringRef extraAttrsAttrName,
     llvm::function_ref<::mlir::ParseResult(::mlir::OpAsmParser &,
                                            ::mlir::OperationState &)>
         customOpHandler =
@@ -2327,6 +2381,23 @@ static ::mlir::ParseResult parseCallCommon(
     return ::mlir::failure();
   if (parser.parseRParen())
     return ::mlir::failure();
+
+  auto &builder = parser.getBuilder();
+  Attribute extraAttrs;
+  if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parser.parseAttribute(extraAttrs).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+  } else {
+    NamedAttrList empty;
+    extraAttrs = mlir::cir::ExtraFuncAttributesAttr::get(
+        builder.getContext(), empty.getDictionary(builder.getContext()));
+  }
+  result.addAttribute(extraAttrsAttrName, extraAttrs);
+
   if (parser.parseOptionalAttrDict(result.attributes))
     return ::mlir::failure();
   if (parser.parseColon())
@@ -2347,6 +2418,7 @@ static ::mlir::ParseResult parseCallCommon(
 void printCallCommon(
     Operation *op, mlir::Value indirectCallee, mlir::FlatSymbolRefAttr flatSym,
     ::mlir::OpAsmPrinter &state,
+    ::mlir::cir::ExtraFuncAttributesAttr extraAttrs,
     llvm::function_ref<void()> customOpHandler = []() {}) {
   state << ' ';
 
@@ -2362,13 +2434,20 @@ void printCallCommon(
   state << "(";
   state << ops;
   state << ")";
-  llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;
+
+  llvm::SmallVector<::llvm::StringRef, 4> elidedAttrs;
   elidedAttrs.push_back("callee");
   elidedAttrs.push_back("ast");
+  elidedAttrs.push_back("extra_attrs");
   state.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   state << ' ' << ":";
   state << ' ';
   state.printFunctionalType(op->getOperands().getTypes(), op->getResultTypes());
+  if (!extraAttrs.getElements().empty()) {
+    state << " extra(";
+    state.printAttributeWithoutType(extraAttrs);
+    state << ")";
+  }
 }
 
 LogicalResult
@@ -2378,12 +2457,14 @@ cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 
 ::mlir::ParseResult CallOp::parse(::mlir::OpAsmParser &parser,
                                   ::mlir::OperationState &result) {
-  return parseCallCommon(parser, result);
+
+  return parseCallCommon(parser, result, getExtraAttrsAttrName(result.name));
 }
 
 void CallOp::print(::mlir::OpAsmPrinter &state) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, indirectCallee, getCalleeAttr(), state);
+  printCallCommon(*this, indirectCallee, getCalleeAttr(), state,
+                  getExtraAttrs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2440,7 +2521,7 @@ LogicalResult cir::TryCallOp::verify() { return mlir::success(); }
 ::mlir::ParseResult TryCallOp::parse(::mlir::OpAsmParser &parser,
                                      ::mlir::OperationState &result) {
   return parseCallCommon(
-      parser, result,
+      parser, result, getExtraAttrsAttrName(result.name),
       [](::mlir::OpAsmParser &parser,
          ::mlir::OperationState &result) -> ::mlir::ParseResult {
         ::mlir::OpAsmParser::UnresolvedOperand exceptionRawOperands[1];
@@ -2482,7 +2563,8 @@ void TryCallOp::print(::mlir::OpAsmPrinter &state) {
   state << getExceptionInfo();
   state << ")";
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
-  printCallCommon(*this, indirectCallee, getCalleeAttr(), state);
+  printCallCommon(*this, indirectCallee, getCalleeAttr(), state,
+                  getExtraAttrs());
 }
 
 //===----------------------------------------------------------------------===//

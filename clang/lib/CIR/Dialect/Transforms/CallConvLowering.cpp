@@ -6,9 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+// FIXME(cir): This header file is not exposed to the public API, but can be
+// reused by CIR ABI lowering since it holds target-specific information.
+#include "../../../Basic/Targets.h"
+
+#include "TargetLowering/LowerModule.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #define GEN_PASS_DEF_CALLCONVLOWERING
@@ -16,6 +24,36 @@
 
 namespace mlir {
 namespace cir {
+
+namespace {
+
+LowerModule createLowerModule(FuncOp op, PatternRewriter &rewriter) {
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+
+  // Fetch the LLVM data layout string.
+  auto dataLayoutStr =
+      module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName())
+          .cast<StringAttr>();
+
+  // Fetch target information.
+  llvm::Triple triple(
+      module->getAttr("cir.triple").cast<StringAttr>().getValue());
+  clang::TargetOptions targetOptions;
+  targetOptions.Triple = triple.str();
+  auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
+
+  // FIXME(cir): This just uses the default language options. We need to account
+  // for custom options.
+  // Create context.
+  assert(!::cir::MissingFeatures::langOpts());
+  clang::LangOptions langOpts;
+  auto context = CIRLowerContext(module.getContext(), langOpts);
+  context.initBuiltinTypes(*targetInfo);
+
+  return LowerModule(context, module, dataLayoutStr, *targetInfo, rewriter);
+}
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // Rewrite Patterns
@@ -26,8 +64,29 @@ struct CallConvLoweringPattern : public OpRewritePattern<FuncOp> {
 
   LogicalResult matchAndRewrite(FuncOp op,
                                 PatternRewriter &rewriter) const final {
+    const auto module = op->getParentOfType<mlir::ModuleOp>();
+
     if (!op.getAst())
       return op.emitError("function has no AST information");
+
+    LowerModule lowerModule = createLowerModule(op, rewriter);
+
+    // Rewrite function calls before definitions. This should be done before
+    // lowering the definition.
+    auto calls = op.getSymbolUses(module);
+    if (calls.has_value()) {
+      for (auto call : calls.value()) {
+        auto callOp = cast<CallOp>(call.getUser());
+        if (lowerModule.rewriteFunctionCall(callOp, op).failed())
+          return failure();
+      }
+    }
+
+    // TODO(cir): Instead of re-emmiting every load and store, bitcast arguments
+    // and return values to their ABI-specific counterparts when possible.
+    if (lowerModule.rewriteFunctionDefinition(op).failed())
+      return failure();
+
     return success();
   }
 };

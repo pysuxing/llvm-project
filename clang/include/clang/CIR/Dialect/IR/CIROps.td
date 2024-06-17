@@ -69,6 +69,7 @@ def CK_FloatToBoolean : I32EnumAttrCase<"float_to_bool", 10>;
 def CK_BooleanToIntegral : I32EnumAttrCase<"bool_to_int", 11>;
 def CK_IntegralToFloat : I32EnumAttrCase<"int_to_float", 12>;
 def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 13>;
+def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 14>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
@@ -76,7 +77,8 @@ def CastKind : I32EnumAttr<
     [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast,
      CK_BitCast, CK_FloatingCast, CK_PtrToBoolean, CK_FloatToIntegral,
      CK_IntegralToPointer, CK_PointerToIntegral, CK_FloatToBoolean,
-     CK_BooleanToIntegral, CK_IntegralToFloat, CK_BooleanToFloat]> {
+     CK_BooleanToIntegral, CK_IntegralToFloat, CK_BooleanToFloat,
+     CK_AddressSpaceConversion]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -98,6 +100,7 @@ def CastOp : CIR_Op<"cast", [Pure]> {
     - `ptr_to_bool`
     - `bool_to_int`
     - `bool_to_float`
+    - `address_space`
 
     This is effectively a subset of the rules from
     `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some
@@ -1468,11 +1471,12 @@ def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 def CaseOpKind_DT : I32EnumAttrCase<"Default", 1, "default">;
 def CaseOpKind_EQ : I32EnumAttrCase<"Equal", 2, "equal">;
 def CaseOpKind_AO : I32EnumAttrCase<"Anyof", 3, "anyof">;
+def CaseOpKind_RG : I32EnumAttrCase<"Range", 4, "range">;
 
 def CaseOpKind : I32EnumAttr<
     "CaseOpKind",
     "case kind",
-    [CaseOpKind_DT, CaseOpKind_EQ, CaseOpKind_AO]> {
+    [CaseOpKind_DT, CaseOpKind_EQ, CaseOpKind_AO, CaseOpKind_RG]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -1510,6 +1514,7 @@ def SwitchOp : CIR_Op<"switch",
     condition.
     - `anyof, [constant-list]`: equals to any of the values in a subsequent
     following list.
+    - `range, [lower-bound, upper-bound]`: the condition is within the closed interval.
     - `default`: any other value.
 
     Each case region must be explicitly terminated.
@@ -1526,6 +1531,10 @@ def SwitchOp : CIR_Op<"switch",
         ...
         cir.return ...
       }
+      case (range, [10, 15]) {
+        ...
+        cir.yield break
+      },
       case (default) {
         ...
         cir.yield fallthrough
@@ -1590,6 +1599,8 @@ def BrOp : CIR_Op<"br",
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2776,6 +2787,7 @@ class CIR_CallOp<string mnemonic, list<Trait> extra_traits = []> :
   dag commonArgs = (ins
     OptionalAttr<FlatSymbolRefAttr>:$callee,
     Variadic<CIR_AnyType>:$arg_ops,
+    ExtraFuncAttr:$extra_attrs,
     OptionalAttr<ASTCallExprInterface>:$ast
   );
 }
@@ -2811,12 +2823,16 @@ def CallOp : CIR_CallOp<"call"> {
   let arguments = commonArgs;
   let results = (outs Optional<CIR_AnyType>:$result);
 
+  let skipDefaultBuilders = 1;
+
   let builders = [
-    OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
+    OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Type":$resType,
+              CArg<"ValueRange", "{}">:$operands), [{
       $_state.addOperands(operands);
-      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
-      if (!callee.getFunctionType().isVoid())
-        $_state.addTypes(callee.getFunctionType().getReturnType());
+      if (callee)
+        $_state.addAttribute("callee", callee);
+      if (resType && !resType.isa<VoidType>())
+        $_state.addTypes(resType);
     }]>,
     OpBuilder<(ins "Value":$ind_target,
                "FuncType":$fn_type,
@@ -2825,18 +2841,6 @@ def CallOp : CIR_CallOp<"call"> {
       $_state.addOperands(operands);
       if (!fn_type.isVoid())
         $_state.addTypes(fn_type.getReturnType());
-    }]>,
-    OpBuilder<(ins "SymbolRefAttr":$callee, "mlir::Type":$resType,
-              CArg<"ValueRange", "{}">:$operands), [{
-      $_state.addOperands(operands);
-      $_state.addAttribute("callee", callee);
-      if (resType && !resType.isa<VoidType>())
-        $_state.addTypes(resType);
-    }]>,
-    OpBuilder<(ins "SymbolRefAttr":$callee,
-              CArg<"ValueRange", "{}">:$operands), [{
-      $_state.addOperands(operands);
-      $_state.addAttribute("callee", callee);
     }]>
   ];
 }
