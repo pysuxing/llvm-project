@@ -2724,6 +2724,30 @@ public:
   }
 };
 
+struct APIntegerLocInfo {
+  SourceLocation location;
+};
+
+/// Wrapper for source info for arrays.
+class APIntegerTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
+                                                APIntegerTypeLoc,
+                                                APIntegerType,
+                                                APIntegerLocInfo> {
+public:
+
+  void setLocation(SourceLocation Loc) {
+    getLocalData()->location = Loc;
+  }
+
+  SourceLocation getLocation() const {
+    return getLocalData()->location;
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setLocation(Loc);
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_TYPELOC_H

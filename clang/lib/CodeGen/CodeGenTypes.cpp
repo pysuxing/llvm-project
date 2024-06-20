@@ -324,6 +324,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   // If we don't have it in the cache, convert it now.
   llvm::Type *ResultType = nullptr;
   switch (Ty->getTypeClass()) {
+  case Type::APInteger:
+    llvm_unreachable("Arbitary precision integer type is only possible with -fclangir.");
   case Type::Record: // Handled above.
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)

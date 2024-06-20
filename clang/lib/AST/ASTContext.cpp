@@ -1970,6 +1970,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     break;
   }
 
+  case Type::APInteger:
+    // RODSFIXME
+    Width = Target->getPointerWidth(LangAS::Default);
+    Align = Target->getPointerAlign(LangAS::Default);
+    break;
   case Type::Builtin:
     switch (cast<BuiltinType>(T)->getKind()) {
     default: llvm_unreachable("Unknown builtin type!");
@@ -3673,6 +3678,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::PackExpansion:
   case Type::PackIndexing:
   case Type::BitInt:
+  case Type::APInteger:
   case Type::DependentBitInt:
   case Type::ArrayParameter:
     llvm_unreachable("type should never be variably-modified");
@@ -4614,6 +4620,15 @@ QualType ASTContext::getReadPipeType(QualType T) const {
 
 QualType ASTContext::getWritePipeType(QualType T) const {
   return getPipeType(T, false);
+}
+QualType ASTContext::getAPIntegerType(bool Unsigned) const {
+  auto &result = APIntegerTypes[Unsigned];
+  if (not result) {
+    auto *Ty = new (*this, alignof(APIntegerType)) APIntegerType(Unsigned);
+    result = CanQualType::CreateUnsafe(QualType(Ty, 0));
+    Types.push_back(Ty);
+  }
+  return result;
 }
 
 QualType ASTContext::getBitIntType(bool IsUnsigned, unsigned NumBits) const {
@@ -8614,6 +8629,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       *NotEncodedT = T;
     return;
 
+  case Type::APInteger:
   case Type::BitInt:
     if (NotEncodedT)
       *NotEncodedT = T;
@@ -10988,6 +11004,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return {};
     return LHS;
   }
+  case Type::APInteger:
+    return LHS;
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -12815,6 +12833,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(DependentBitInt)
     SUGAR_FREE_TYPE(Enum)
     SUGAR_FREE_TYPE(BitInt)
+    SUGAR_FREE_TYPE(APInteger)
     SUGAR_FREE_TYPE(ObjCInterface)
     SUGAR_FREE_TYPE(Record)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
@@ -13143,6 +13162,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
 #define CANONICAL_TYPE(Class) UNEXPECTED_TYPE(Class, "canonical")
     CANONICAL_TYPE(Atomic)
     CANONICAL_TYPE(BitInt)
+    CANONICAL_TYPE(APInteger)
     CANONICAL_TYPE(BlockPointer)
     CANONICAL_TYPE(Builtin)
     CANONICAL_TYPE(Complex)

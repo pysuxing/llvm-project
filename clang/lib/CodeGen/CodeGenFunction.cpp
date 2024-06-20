@@ -235,6 +235,8 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();
   while (true) {
     switch (type->getTypeClass()) {
+  case Type::APInteger:
+    llvm_unreachable("Arbitary precision integer type is only possible with -fclangir.");
 #define TYPE(name, parent)
 #define ABSTRACT_TYPE(name, parent)
 #define NON_CANONICAL_TYPE(name, parent) case Type::name:
@@ -2309,6 +2311,8 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     const Type *ty = type.getTypePtr();
     switch (ty->getTypeClass()) {
 
+  case Type::APInteger:
+    llvm_unreachable("Arbitary precision integer type is only possible with -fclangir.");
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define NON_CANONICAL_TYPE(Class, Base)

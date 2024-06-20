@@ -5234,6 +5234,14 @@ QualType TransformTypeSpecType(TypeLocBuilder &TLB, TyLoc T) {
 }
 
 template<typename Derived>
+QualType TreeTransform<Derived>::TransformAPIntegerType(TypeLocBuilder &TLB,
+                                                        APIntegerTypeLoc T) {
+  APIntegerTypeLoc NewT = TLB.push<APIntegerTypeLoc>(T.getType());
+  NewT.setLocation(T.getLocation());
+  return T.getType();
+}
+
+template<typename Derived>
 QualType TreeTransform<Derived>::TransformBuiltinType(TypeLocBuilder &TLB,
                                                       BuiltinTypeLoc T) {
   BuiltinTypeLoc NewT = TLB.push<BuiltinTypeLoc>(T.getType());

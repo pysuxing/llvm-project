@@ -376,6 +376,9 @@ VectorType::VectorType(TypeClass tc, QualType vecType, unsigned nElements,
   VectorTypeBits.NumElements = nElements;
 }
 
+APIntegerType::APIntegerType(bool IsUnsigned)
+    : Type(APInteger, QualType(), TypeDependence::None), IsUnsigned(IsUnsigned) {}
+
 BitIntType::BitIntType(bool IsUnsigned, unsigned NumBits)
     : Type(BitInt, QualType{}, TypeDependence::None), IsUnsigned(IsUnsigned),
       NumBits(NumBits) {}
@@ -4420,6 +4423,7 @@ static CachedProperties computeCachedProperties(const Type *T) {
     // here in error recovery.
     return CachedProperties(Linkage::External, false);
 
+  case Type::APInteger:
   case Type::BitInt:
   case Type::Builtin:
     // C++ [basic.link]p8:
@@ -4521,6 +4525,7 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     assert(T->isInstantiationDependentType());
     return LinkageInfo::external();
 
+  case Type::APInteger:
   case Type::BitInt:
   case Type::Builtin:
     return LinkageInfo::external();
@@ -4663,6 +4668,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
         return CTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
     return ResultIfUnknown;
 
+  case Type::APInteger:
+    return false;
   case Type::Builtin:
     switch (cast<BuiltinType>(type.getTypePtr())->getKind()) {
       // Signed, unsigned, and floating-point types cannot have nullability.

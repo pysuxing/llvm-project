@@ -3248,6 +3248,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     // Array parameter types are treated as fundamental types.
     case Type::ArrayParameter:
       break;
+    case Type::APInteger:
+      break;
     }
 
     if (Queue.empty())

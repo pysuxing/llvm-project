@@ -8221,6 +8221,23 @@ QualType DecayedType::getPointeeType() const {
 void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
                              unsigned Scale);
 
+class APIntegerType : public Type {
+  friend class ASTContext;
+private:
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsUnsigned : 1;
+protected:
+  APIntegerType(bool IsUnsigned);
+public:
+  bool isUnsigned() const { return IsUnsigned; }
+  bool isSigned() const { return !IsUnsigned; }
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == APInteger;
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_TYPE_H

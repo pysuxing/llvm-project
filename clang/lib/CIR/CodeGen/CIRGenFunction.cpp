@@ -87,6 +87,7 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::APInteger:
       return TEK_Scalar;
 
     // Complexes.
@@ -1568,6 +1569,7 @@ void CIRGenFunction::buildVariablyModifiedType(QualType type) {
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
     case Type::BitInt:
+    case Type::APInteger:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Elaborated:

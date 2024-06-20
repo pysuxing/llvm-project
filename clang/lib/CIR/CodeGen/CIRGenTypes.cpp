@@ -737,6 +737,12 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
         Builder.getContext(), bitIntTy->getNumBits(), bitIntTy->isSigned());
     break;
   }
+  case Type::APInteger: {
+    // const auto *bitIntTy = cast<APIntegerType>(Ty);
+    // RODSFIXME
+    return mlir::Type();
+    break;
+  }
   }
 
   assert(ResultType && "Didn't convert a type?");

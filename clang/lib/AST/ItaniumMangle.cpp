@@ -2430,6 +2430,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Atomic:
   case Type::Pipe:
   case Type::MacroQualified:
+  case Type::APInteger:
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::CountAttributed:
@@ -4436,6 +4437,13 @@ void CXXNameMangler::mangleType(const BitIntType *T) {
   // <type> ::= DB <number | instantiation-dependent expression> _
   //        ::= DU <number | instantiation-dependent expression> _
   Out << "D" << (T->isUnsigned() ? "U" : "B") << T->getNumBits() << "_";
+}
+
+void CXXNameMangler::mangleType(const APIntegerType *T) {
+  // 5.1.5.2 Builtin types
+  // <type> ::= DB <number | instantiation-dependent expression> _
+  //        ::= DU <number | instantiation-dependent expression> _
+  Out << "D" << (T->isUnsigned() ? "U" : "B") << "_";
 }
 
 void CXXNameMangler::mangleType(const DependentBitIntType *T) {

@@ -1143,6 +1143,7 @@ public:
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+  mutable CanQualType APIntegerTypes[2]; // 0 -> SignedAPIntegerTy, 1 -> UnsignedAPIntegerTy;
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1396,6 +1397,9 @@ public:
   /// Return a bit-precise integer type with the specified signedness and bit
   /// count.
   QualType getBitIntType(bool Unsigned, unsigned NumBits) const;
+
+  /// Return an arbitary precision integer type with the specified signedness
+  QualType getAPIntegerType(bool Unsigned) const;
 
   /// Return a dependent bit-precise integer type with the specified signedness
   /// and bit count.

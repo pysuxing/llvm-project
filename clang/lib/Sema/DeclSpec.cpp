@@ -366,6 +366,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_int:
     case TST_int128:
     case TST_bitint:
+    case TST_integer:
     case TST_struct:
     case TST_interface:
     case TST_union:
@@ -568,6 +569,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_int:         return "int";
   case DeclSpec::TST_int128:      return "__int128";
   case DeclSpec::TST_bitint:      return "_BitInt";
+  case DeclSpec::TST_integer:      return "integer";
   case DeclSpec::TST_half:        return "half";
   case DeclSpec::TST_float:       return "float";
   case DeclSpec::TST_double:      return "double";

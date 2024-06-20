@@ -4393,6 +4393,10 @@ void Parser::ParseDeclarationSpecifiers(
       ConsumedEnd = PrevTokLocation;
       break;
     }
+    case tok::kw_integer:
+      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_integer, Loc, PrevSpec,
+                                     DiagID, Policy);
+      break;
     case tok::kw___int128:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int128, Loc, PrevSpec,
                                      DiagID, Policy);

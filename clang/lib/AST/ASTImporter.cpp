@@ -1758,6 +1758,9 @@ ExpectedType clang::ASTNodeImporter::VisitAdjustedType(const AdjustedType *T) {
                                                  ToAdjustedType);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitAPIntegerType(const APIntegerType *T) {
+  return Importer.getToContext().getAPIntegerType(T->isUnsigned());
+}
 ExpectedType clang::ASTNodeImporter::VisitBitIntType(const BitIntType *T) {
   return Importer.getToContext().getBitIntType(T->isUnsigned(),
                                                T->getNumBits());

@@ -3531,6 +3531,19 @@ void MicrosoftMangleContextImpl::mangleCXXName(GlobalDecl GD,
   return Mangler.mangle(GD);
 }
 
+void MicrosoftCXXNameMangler::mangleType(const APIntegerType *T, Qualifiers,
+                                         SourceRange Range) {
+  llvm::SmallString<64> TemplateMangling;
+  llvm::raw_svector_ostream Stream(TemplateMangling);
+  MicrosoftCXXNameMangler Extra(Context, Stream);
+  Stream << "?$";
+  if (T->isUnsigned())
+    Extra.mangleSourceName("uinteger");
+  else
+    Extra.mangleSourceName("sinteger");
+  mangleArtificialTagType(TagTypeKind::Struct, TemplateMangling, {"__clang"});
+}
+
 void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
                                          SourceRange Range) {
   llvm::SmallString<64> TemplateMangling;

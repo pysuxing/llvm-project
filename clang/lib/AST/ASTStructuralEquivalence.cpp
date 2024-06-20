@@ -825,6 +825,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   }
 
   switch (TC) {
+  case Type::APInteger:
+    return true;
   case Type::Builtin:
     // FIXME: Deal with Char_S/Char_U.
     if (cast<BuiltinType>(T1)->getKind() != cast<BuiltinType>(T2)->getKind())

@@ -3565,6 +3565,8 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
   const char *VTableName = nullptr;
 
   switch (Ty->getTypeClass()) {
+  case Type::APInteger:
+    llvm_unreachable("Arbitary precision integer type is only possible with -fclangir.");
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base) case Type::Class:
@@ -3835,6 +3837,8 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   Fields.push_back(TypeNameField);
 
   switch (Ty->getTypeClass()) {
+  case Type::APInteger:
+    llvm_unreachable("Arbitary precision integer type is only possible with -fclangir.");
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define NON_CANONICAL_UNLESS_DEPENDENT_TYPE(Class, Base) case Type::Class:

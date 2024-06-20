@@ -7024,6 +7024,10 @@ bool UnnamedLocalNoLinkageFinder::VisitBitIntType(const BitIntType *T) {
   return false;
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitAPIntegerType(const APIntegerType *T) {
+  return false;
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitArrayParameterType(
     const ArrayParameterType *T) {
   return VisitConstantArrayType(T);

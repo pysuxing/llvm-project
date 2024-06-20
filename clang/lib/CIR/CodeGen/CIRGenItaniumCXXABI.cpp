@@ -1492,6 +1492,7 @@ void CIRGenItaniumRTTIBuilder::BuildVTablePointer(mlir::Location loc,
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::APInteger:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -1876,6 +1877,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
   case Type::Pipe:
     break;
 
+  case Type::APInteger:
   case Type::BitInt:
     break;
 

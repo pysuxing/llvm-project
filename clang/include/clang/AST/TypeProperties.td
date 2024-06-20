@@ -994,3 +994,12 @@ let Class = DependentBitIntType in {
     return ctx.getDependentBitIntType(isUnsigned, numBitsExpr);
   }]>;
 }
+
+let Class = APIntegerType in {
+  def : Property<"isUnsigned", Bool> {
+    let Read = [{ node->isUnsigned() }];
+  }
+  def : Creator<[{
+    return ctx.getAPIntegerType(isUnsigned);
+  }]>;
+}

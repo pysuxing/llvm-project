@@ -940,6 +940,16 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   return DBuilder.createBasicType(BTName, Size, Encoding);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const APIntegerType *Ty) {
+  StringRef Name = Ty->isUnsigned() ? "unsigned integer" : "integer";
+  llvm::dwarf::TypeKind Encoding = Ty->isUnsigned()
+                                       ? llvm::dwarf::DW_ATE_unsigned
+                                       : llvm::dwarf::DW_ATE_signed;
+
+  return DBuilder.createBasicType(Name, CGM.getContext().getTypeSize(Ty),
+                                  Encoding);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
 
   StringRef Name = Ty->isUnsigned() ? "unsigned _BitInt" : "_BitInt";
@@ -3735,6 +3745,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
   case Type::Atomic:
     return CreateType(cast<AtomicType>(Ty), Unit);
 
+  case Type::APInteger:
+    return CreateType(cast<APIntegerType>(Ty));
   case Type::BitInt:
     return CreateType(cast<BitIntType>(Ty));
   case Type::Pipe:

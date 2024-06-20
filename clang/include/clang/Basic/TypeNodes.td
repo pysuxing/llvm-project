@@ -115,3 +115,6 @@ def PipeType : TypeNode<Type>;
 def AtomicType : TypeNode<Type>;
 def BitIntType : TypeNode<Type>;
 def DependentBitIntType : TypeNode<Type>, AlwaysDependent;
+def APIntegerType : TypeNode<Type>, LeafType;
+// def RealType : TypeNode<Type>, LeafType;
+// def PositType : TypeNode<Type>, LeafType;

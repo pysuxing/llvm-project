@@ -11562,6 +11562,7 @@ public:
   QualType BuildReadPipeType(QualType T, SourceLocation Loc);
   QualType BuildWritePipeType(QualType T, SourceLocation Loc);
   QualType BuildBitIntType(bool IsUnsigned, Expr *BitWidth, SourceLocation Loc);
+  QualType BuildAPIntegerType(SourceLocation Loc);
 
   TypeSourceInfo *GetTypeForDeclarator(Declarator &D);
   TypeSourceInfo *GetTypeForDeclaratorCast(Declarator &D, QualType FromTy);

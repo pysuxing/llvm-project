@@ -244,6 +244,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::ObjCInterface:
     case Type::Atomic:
     case Type::Pipe:
+    case Type::APInteger:
     case Type::BitInt:
     case Type::DependentBitInt:
     case Type::BTFTagAttributed:
@@ -1320,6 +1321,15 @@ void TypePrinter::printPipeBefore(const PipeType *T, raw_ostream &OS) {
 }
 
 void TypePrinter::printPipeAfter(const PipeType *T, raw_ostream &OS) {}
+
+void TypePrinter::printAPIntegerBefore(const APIntegerType *T, raw_ostream &OS) {
+  if (T->isUnsigned())
+    OS << "unsigned ";
+  OS << "integer";
+  spaceBeforePlaceHolder(OS);
+}
+
+void TypePrinter::printAPIntegerAfter(const APIntegerType *T, raw_ostream &OS) {}
 
 void TypePrinter::printBitIntBefore(const BitIntType *T, raw_ostream &OS) {
   if (T->isUnsigned())
