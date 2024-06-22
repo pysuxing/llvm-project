@@ -7169,6 +7169,9 @@ unsigned ASTContext::getIntegerRank(const Type *T) const {
   // larger.
   if (const auto *EIT = dyn_cast<BitIntType>(T))
     return 0 + (EIT->getNumBits() << 3);
+  // Rank of APIntegerType is 1 larger than that of Int128
+  if (const auto *APIT = dyn_cast<APIntegerType>(T))
+    return 7 + (getIntWidth(Int128Ty) << 3) + 1;
 
   switch (cast<BuiltinType>(T)->getKind()) {
   default: llvm_unreachable("getIntegerRank(): not a built-in integer");

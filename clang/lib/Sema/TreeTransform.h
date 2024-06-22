@@ -1281,6 +1281,7 @@ public:
   QualType RebuildPipeType(QualType ValueType, SourceLocation KWLoc,
                            bool isReadPipe);
 
+  QualType RebuildAPIntegerType(bool IsUnsigned, SourceLocation Loc);
   /// Build a bit-precise int given its value type.
   QualType RebuildBitIntType(bool IsUnsigned, unsigned NumBits,
                              SourceLocation Loc);
@@ -5234,14 +5235,6 @@ QualType TransformTypeSpecType(TypeLocBuilder &TLB, TyLoc T) {
 }
 
 template<typename Derived>
-QualType TreeTransform<Derived>::TransformAPIntegerType(TypeLocBuilder &TLB,
-                                                        APIntegerTypeLoc T) {
-  APIntegerTypeLoc NewT = TLB.push<APIntegerTypeLoc>(T.getType());
-  NewT.setLocation(T.getLocation());
-  return T.getType();
-}
-
-template<typename Derived>
 QualType TreeTransform<Derived>::TransformBuiltinType(TypeLocBuilder &TLB,
                                                       BuiltinTypeLoc T) {
   BuiltinTypeLoc NewT = TLB.push<BuiltinTypeLoc>(T.getType());
@@ -6910,6 +6903,23 @@ QualType TreeTransform<Derived>::TransformPipeType(TypeLocBuilder &TLB,
   PipeTypeLoc NewTL = TLB.push<PipeTypeLoc>(Result);
   NewTL.setKWLoc(TL.getKWLoc());
 
+  return Result;
+}
+
+template<typename Derived>
+QualType TreeTransform<Derived>::TransformAPIntegerType(TypeLocBuilder &TLB,
+                                                        APIntegerTypeLoc TL) {
+  const APIntegerType *APIT = TL.getTypePtr();
+  QualType Result = TL.getType();
+
+  if (getDerived().AlwaysRebuild()) {
+    Result = getDerived().RebuildAPIntegerType(APIT->isUnsigned(), TL.getNameLoc());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  APIntegerTypeLoc NewTL = TLB.push<APIntegerTypeLoc>(Result);
+  NewTL.setNameLoc(TL.getNameLoc());
   return Result;
 }
 
@@ -15856,6 +15866,11 @@ QualType TreeTransform<Derived>::RebuildPipeType(QualType ValueType,
                                                  bool isReadPipe) {
   return isReadPipe ? SemaRef.BuildReadPipeType(ValueType, KWLoc)
                     : SemaRef.BuildWritePipeType(ValueType, KWLoc);
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildAPIntegerType(bool IsUnsigned, SourceLocation Loc) {
+  return SemaRef.BuildAPIntegerType(IsUnsigned, Loc);
 }
 
 template <typename Derived>

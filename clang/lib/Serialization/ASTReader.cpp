@@ -7123,7 +7123,7 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
 }
 
 void TypeLocReader::VisitAPIntegerTypeLoc(clang::APIntegerTypeLoc TL) {
-  TL.setLocation(readSourceLocation());
+  TL.setNameLoc(readSourceLocation());
 }
 void TypeLocReader::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());

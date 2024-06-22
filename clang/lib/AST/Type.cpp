@@ -2170,6 +2170,8 @@ bool Type::isSignedIntegerOrEnumerationType() const {
     return IT->isSigned();
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
     return IT->isSigned();
+  if (const auto *IT = dyn_cast<APIntegerType>(CanonicalType))
+    return IT->isSigned();
 
   return false;
 }
@@ -2219,6 +2221,8 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isUnsigned();
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
+    return IT->isUnsigned();
+  if (const auto *IT = dyn_cast<APIntegerType>(CanonicalType))
     return IT->isUnsigned();
 
   return false;
@@ -2281,7 +2285,7 @@ bool Type::isArithmeticType() const {
     // false for scoped enumerations since that will disable any
     // unwanted implicit conversions.
     return !ET->getDecl()->isScoped() && ET->getDecl()->isComplete();
-  return isa<ComplexType>(CanonicalType) || isBitIntType();
+  return isa<ComplexType>(CanonicalType) || isBitIntType() || isAPIntegerType();
 }
 
 Type::ScalarTypeKind Type::getScalarTypeKind() const {
@@ -2311,6 +2315,8 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
       return STK_FloatingComplex;
     return STK_IntegralComplex;
   } else if (isBitIntType()) {
+    return STK_Integral;
+  } else if (isAPIntegerType()) {
     return STK_Integral;
   }
 

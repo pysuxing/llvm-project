@@ -5680,6 +5680,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_int:
   case tok::kw__ExtInt:
   case tok::kw__BitInt:
+  case tok::kw_integer:
   case tok::kw_half:
   case tok::kw___bf16:
   case tok::kw_float:
@@ -5902,6 +5903,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_int:
   case tok::kw__ExtInt:
   case tok::kw__BitInt:
+  case tok::kw_integer:
   case tok::kw_half:
   case tok::kw___bf16:
   case tok::kw_float:

@@ -642,7 +642,7 @@ void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitAPIntegerTypeLoc(clang::APIntegerTypeLoc TL) {
-  addSourceLocation(TL.getLocation());
+  addSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());

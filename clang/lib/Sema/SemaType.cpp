@@ -2371,6 +2371,10 @@ QualType Sema::BuildWritePipeType(QualType T, SourceLocation Loc) {
   return Context.getWritePipeType(T);
 }
 
+QualType Sema::BuildAPIntegerType(bool IsUnsigned, SourceLocation Loc) {
+  return Context.getAPIntegerType(IsUnsigned);
+}
+
 /// Build a bit-precise integer type.
 ///
 /// \param IsUnsigned Boolean representing the signedness of the type.

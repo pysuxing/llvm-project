@@ -2604,6 +2604,7 @@ public:
 
   bool isPipeType() const;                      // OpenCL pipe type
   bool isBitIntType() const;                    // Bit-precise integer type
+  bool isAPIntegerType() const;                 // Arbitary precise integer type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
 
   /// Determines if this type, which must satisfy
@@ -7837,6 +7838,10 @@ inline bool Type::isBitIntType() const {
   return isa<BitIntType>(CanonicalType);
 }
 
+inline bool Type::isAPIntegerType() const {
+  return isa<APIntegerType>(CanonicalType);
+}
+
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   inline bool Type::is##Id##Type() const { \
     return isSpecificBuiltinType(BuiltinType::Id); \
@@ -7948,7 +7953,7 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
       !IsEnumDeclScoped(ET->getDecl());
   }
-  return isBitIntType();
+  return isBitIntType() || isAPIntegerType();
 }
 
 inline bool Type::isFixedPointType() const {
@@ -8010,7 +8015,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isBitIntType();
+         isBitIntType() || isAPIntegerType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -8023,7 +8028,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
 
-  return isBitIntType();
+  return isBitIntType() || isAPIntegerType();
 }
 
 inline bool Type::isBooleanType() const {
