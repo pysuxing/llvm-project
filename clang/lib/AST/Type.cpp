@@ -2056,7 +2056,7 @@ bool Type::isIntegralType(const ASTContext &Ctx) const {
     if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete();
 
-  return isBitIntType();
+  return isBitIntType() || isAPIntegerType();
 }
 
 bool Type::isIntegralOrUnscopedEnumerationType() const {
@@ -2064,7 +2064,7 @@ bool Type::isIntegralOrUnscopedEnumerationType() const {
     return BT->getKind() >= BuiltinType::Bool &&
            BT->getKind() <= BuiltinType::Int128;
 
-  if (isBitIntType())
+  if (isBitIntType() || isAPIntegerType())
     return true;
 
   return isUnscopedEnumerationType();
@@ -2147,6 +2147,8 @@ bool Type::isSignedIntegerType() const {
       return ET->getDecl()->getIntegerType()->isSignedIntegerType();
   }
 
+  if (const auto *IT = dyn_cast<APIntegerType>(CanonicalType))
+    return IT->isSigned();
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isSigned();
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
@@ -2166,11 +2168,11 @@ bool Type::isSignedIntegerOrEnumerationType() const {
       return ET->getDecl()->getIntegerType()->isSignedIntegerType();
   }
 
+  if (const auto *IT = dyn_cast<APIntegerType>(CanonicalType))
+    return IT->isSigned();
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isSigned();
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
-    return IT->isSigned();
-  if (const auto *IT = dyn_cast<APIntegerType>(CanonicalType))
     return IT->isSigned();
 
   return false;
@@ -2199,6 +2201,8 @@ bool Type::isUnsignedIntegerType() const {
       return ET->getDecl()->getIntegerType()->isUnsignedIntegerType();
   }
 
+  if (const auto *IT = dyn_cast<APIntegerType>(CanonicalType))
+    return IT->isUnsigned();
   if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
     return IT->isUnsigned();
   if (const auto *IT = dyn_cast<DependentBitIntType>(CanonicalType))
@@ -2270,7 +2274,7 @@ bool Type::isRealType() const {
            BT->getKind() <= BuiltinType::Ibm128;
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
       return ET->getDecl()->isComplete() && !ET->getDecl()->isScoped();
-  return isBitIntType();
+  return isBitIntType() || isAPIntegerType();
 }
 
 bool Type::isArithmeticType() const {
