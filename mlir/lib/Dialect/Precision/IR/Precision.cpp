@@ -59,6 +59,25 @@ namespace precision {
 //   else
 //     printer << width;
 // }
+//
+static LogicalResult parseSignedness(AsmParser &parser, bool &isSigned) {
+  llvm::StringRef sign;
+  if (parser.parseKeyword(&sign))
+    return failure();
+  if (sign.equals("s")) {
+    isSigned = true;
+    return success();
+  }
+  if (sign.equals("u")) {
+    isSigned = false;
+    return success();
+  }
+  return failure();
+}
+
+static void printSignedness(AsmPrinter &printer, bool isSigned) {
+  printer << (isSigned ? 's' : 'u');
+}
 // LogicalResult
 // IntegerType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
 //                     unsigned width) {
@@ -100,66 +119,71 @@ PositType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
 
 OpFoldResult CIToIOp::fold(FoldAdaptor adaptor) {
   auto ty = getType();
+  // RODSFIXME precision::IntegerAttr should be used here
   return constFoldCastOp<mlir::IntegerAttr, mlir::IntegerAttr>(
       adaptor.getOperands(), ty, [](const llvm::APInt &api, bool &status) {
         status = true;
         return api;
       });
 }
-OpFoldResult IToCIOp::fold(FoldAdaptor adaptor) {
-  auto ty = getType();
-  return constFoldCastOp<mlir::IntegerAttr, mlir::IntegerAttr>(
-      adaptor.getOperands(), ty, [](const llvm::APInt &api, bool &status) {
-        status = true;
-        return api;
-      });
-}
-OpFoldResult UIToCFOp::fold(FoldAdaptor adaptor) {
-  auto ty = getType();
-  return constFoldCastOp<mlir::IntegerAttr, mlir::FloatAttr>(
-      adaptor.getOperands(), ty, [&ty](const llvm::APInt &api, bool &status) {
-        status = true;
-        APFloat apf(ty.getFloatSemantics(), APInt::getZero(ty.getWidth()));
-        apf.convertFromAPInt(api, /*IsSigned=*/false,
-                             APFloat::rmNearestTiesToEven);
-        return apf;
-      });
-}
-OpFoldResult SIToCFOp::fold(FoldAdaptor adaptor) {
-  auto ty = getType();
-  return constFoldCastOp<mlir::IntegerAttr, mlir::FloatAttr>(
-      adaptor.getOperands(), ty, [&ty](const llvm::APInt &api, bool &status) {
-        status = true;
-        APFloat apf(ty.getFloatSemantics(), APInt::getZero(ty.getWidth()));
-        apf.convertFromAPInt(api, /*IsSigned=*/true,
-                             APFloat::rmNearestTiesToEven);
-        return apf;
-      });
-}
-OpFoldResult CFToUIOp::fold(FoldAdaptor adaptor) {
-  auto ty = getType();
-  return constFoldCastOp<FloatAttr, IntegerAttr>(
-      adaptor.getOperands(), ty, [](const APFloat &mpf, bool &castStatus) {
-        bool ignored;
-        APSInt api(APFloat::semanticsIntSizeInBits(mpf.getSemantics(),
-                                                   /*IsSigned=*/false));
-        castStatus = APFloat::opInvalidOp !=
-                     mpf.convertToInteger(api, APFloat::rmTowardZero, &ignored);
-        return api;
-      });
-}
-OpFoldResult CFToSIOp::fold(FoldAdaptor adaptor) {
-  auto ty = getType();
-  return constFoldCastOp<FloatAttr, IntegerAttr>(
-      adaptor.getOperands(), ty, [](const APFloat &mpf, bool &castStatus) {
-        bool ignored;
-        APSInt api(APFloat::semanticsIntSizeInBits(mpf.getSemantics(),
-                                                   /*IsSigned=*/true));
-        castStatus = APFloat::opInvalidOp !=
-                     mpf.convertToInteger(api, APFloat::rmTowardZero, &ignored);
-        return api;
-      });
-}
+// OpFoldResult IToCIOp::fold(FoldAdaptor adaptor) {
+//   auto ty = getType();
+//   return constFoldCastOp<mlir::IntegerAttr, mlir::IntegerAttr>(
+//       adaptor.getOperands(), ty, [](const llvm::APInt &api, bool &status) {
+//         status = true;
+//         return api;
+//       });
+// }
+// OpFoldResult UIToCFOp::fold(FoldAdaptor adaptor) {
+//   auto ty = getType();
+//   return constFoldCastOp<mlir::IntegerAttr, mlir::FloatAttr>(
+//       adaptor.getOperands(), ty, [&ty](const llvm::APInt &api, bool &status)
+//       {
+//         status = true;
+//         APFloat apf(ty.getFloatSemantics(), APInt::getZero(ty.getWidth()));
+//         apf.convertFromAPInt(api, /*IsSigned=*/false,
+//                              APFloat::rmNearestTiesToEven);
+//         return apf;
+//       });
+// }
+// OpFoldResult SIToCFOp::fold(FoldAdaptor adaptor) {
+//   auto ty = getType();
+//   return constFoldCastOp<mlir::IntegerAttr, mlir::FloatAttr>(
+//       adaptor.getOperands(), ty, [&ty](const llvm::APInt &api, bool &status)
+//       {
+//         status = true;
+//         APFloat apf(ty.getFloatSemantics(), APInt::getZero(ty.getWidth()));
+//         apf.convertFromAPInt(api, /*IsSigned=*/true,
+//                              APFloat::rmNearestTiesToEven);
+//         return apf;
+//       });
+// }
+// OpFoldResult CFToUIOp::fold(FoldAdaptor adaptor) {
+//   auto ty = getType();
+//   return constFoldCastOp<FloatAttr, IntegerAttr>(
+//       adaptor.getOperands(), ty, [](const APFloat &mpf, bool &castStatus) {
+//         bool ignored;
+//         APSInt api(APFloat::semanticsIntSizeInBits(mpf.getSemantics(),
+//                                                    /*IsSigned=*/false));
+//         castStatus = APFloat::opInvalidOp !=
+//                      mpf.convertToInteger(api, APFloat::rmTowardZero,
+//                      &ignored);
+//         return api;
+//       });
+// }
+// OpFoldResult CFToSIOp::fold(FoldAdaptor adaptor) {
+//   auto ty = getType();
+//   return constFoldCastOp<FloatAttr, IntegerAttr>(
+//       adaptor.getOperands(), ty, [](const APFloat &mpf, bool &castStatus) {
+//         bool ignored;
+//         APSInt api(APFloat::semanticsIntSizeInBits(mpf.getSemantics(),
+//                                                    /*IsSigned=*/true));
+//         castStatus = APFloat::opInvalidOp !=
+//                      mpf.convertToInteger(api, APFloat::rmTowardZero,
+//                      &ignored);
+//         return api;
+//       });
+// }
 } // namespace precision
 } // namespace mlir
 

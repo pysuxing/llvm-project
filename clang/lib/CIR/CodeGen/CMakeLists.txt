@@ -77,3 +77,5 @@ add_clang_library(clangCIR
   MLIRTargetLLVMIRExport
   MLIRTransforms
 )
+
+message(STATUS "====== ${dialect_libs}")

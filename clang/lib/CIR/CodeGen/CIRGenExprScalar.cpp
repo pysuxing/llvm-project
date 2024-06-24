@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 
+#include "mlir/Dialect/Precision/IR/Precision.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 
@@ -1874,6 +1875,8 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
       CastKind = mlir::cir::CastKind::integral;
     } else if (DstTy.isa<mlir::cir::CIRFPTypeInterface>()) {
       CastKind = mlir::cir::CastKind::int_to_float;
+    } else if (DstTy.isa<mlir::precision::IntegerType>()) {
+      CastKind = mlir::cir::CastKind::integral;
     } else {
       llvm_unreachable("Internal error: Cast to unexpected type");
     }
@@ -1898,6 +1901,10 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   }
 
   assert(CastKind.has_value() && "Internal error: CastKind not set.");
+  if (CastKind == mlir::cir::CastKind::integral and
+      isa<mlir::precision::IntegerType>(DstTy) and
+      isa<mlir::cir::IntType>(SrcTy))
+    return Builder.create<mlir::precision::CIToIOp>(Src.getLoc(), DstTy, Src);
   return Builder.create<mlir::cir::CastOp>(Src.getLoc(), FullDstTy, *CastKind,
                                            Src);
 }

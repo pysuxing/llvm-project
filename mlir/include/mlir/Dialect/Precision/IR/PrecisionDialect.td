@@ -11,7 +11,7 @@ def Precision_Dialect : Dialect {
 
   // FIXME we may need this
   // let hasConstantMaterializer = 1;
-  // let useDefaultAttributePrinterParser = 1;
+  let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
   let dependentDialects = ["arith::ArithDialect", "func::FuncDialect"];
 }

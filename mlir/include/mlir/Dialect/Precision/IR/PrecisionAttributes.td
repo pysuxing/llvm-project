@@ -10,29 +10,26 @@ class PrecisionAttr<string name, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
-// def IntegerAttr : PrecisionAttr<"Integer", "integer"> {
-//   let summary = "An attribute containing an arbitarty precision integer value";
-//   let description = [{}];
-//   let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
-//   let assemblyFormat = "`<` $value `>`";
-//   let extraClassDeclaration = [{
-//     using ValueType = APInt;
-//   }];
-//   let builders = [
-//     AttrBuilder<(ins "const APInt &":$value), [{
-//       auto type = precision::IntegerType::get($_ctxt);
-//       return $_get($_ctxt, type, value);
-//     }]>,
-//     AttrBuilder<(ins "int64_t":$value), [{
-//       APInt api(64, value);
-//       return get($_ctxt, api);
-//     }]>,
-//     AttrBuilder<(ins "ArrayRef<uint64_t>":$limbs), [{
-//       APInt api(64 * limbs.size(), limbs);
-//       return get($_ctxt, api);
-//     }]>
-//   ];
-// }
+def IntegerAttr : PrecisionAttr<"Integer", "integer"> {
+  let summary = "An attribute containing an arbitarty precision integer value";
+  let description = [{}];
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
+  let assemblyFormat = "`<` $value `>`";
+  let extraClassDeclaration = [{
+    using ValueType = APInt;
+  }];
+  let builders = [
+    AttrBuilder<(ins "const APSInt &":$value), [{
+      auto type = precision::IntegerType::get($_ctxt, value.isSigned());
+      return $_get($_ctxt, type, value);
+    }]>,
+    AttrBuilder<(ins "ArrayRef<uint64_t>":$limbs, "bool":$isSigned), [{
+      auto type = precision::IntegerType::get($_ctxt, isSigned);
+      APInt api(64 * limbs.size(), limbs);
+      return $_get($_ctxt, type, api);
+    }]>
+  ];
+}
 
 // def RealAttr : PrecisionAttr<"Real", "real"> {
 //   let summary = "An attribute containing an arbitarty precision real value";

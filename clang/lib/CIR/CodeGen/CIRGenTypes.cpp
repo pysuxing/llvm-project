@@ -5,8 +5,10 @@
 #include "CallingConv.h"
 #include "TargetInfo.h"
 
+#include "mlir/Dialect/Precision/IR/Precision.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "clang/AST/ASTContext.h"
@@ -737,12 +739,10 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
         Builder.getContext(), bitIntTy->getNumBits(), bitIntTy->isSigned());
     break;
   }
-  case Type::APInteger: {
-    // const auto *bitIntTy = cast<APIntegerType>(Ty);
-    // RODSFIXME
-    return mlir::Type();
+  case Type::APInteger:
+    const auto *apit = cast<APIntegerType>(Ty);
+    ResultType = mlir::precision::IntegerType::get(Builder.getContext(), apit->isSigned());
     break;
-  }
   }
 
   assert(ResultType && "Didn't convert a type?");

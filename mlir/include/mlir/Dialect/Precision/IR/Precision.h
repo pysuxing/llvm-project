@@ -15,6 +15,8 @@
 // #include "mlir/IR/BuiltinTypes.h"
 // #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 
 #include "mlir/Dialect/Precision/IR/PrecisionOpsDialect.h.inc"
 

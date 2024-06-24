@@ -10,34 +10,24 @@ class PrecisionType<string name, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = typeMnemonic;
 }
 
-// def IntegerType : PrecisionType<"Integer", "integer"> {
-//   // let cppBaseClassName = "mlir::IntegerType";
-//   let summary = "Integer type with arbitrary precision up)";
-//   let description = [{}];
-//   let parameters = (ins "unsigned":$width);
-//   let assemblyFormat = "`<` custom<IntegerWidth>($width) `>`";
-//   let builders = [
-//     TypeBuilder<(ins CArg<"unsigned", "kDynamic">:$width), [{
-//       return Base::get($_ctxt, width);
-//     }]>
-//   ];
-//   let skipDefaultBuilders = 1;
-//   let genVerifyDecl = 1;
-//   let extraClassDeclaration = [{
-//     bool isDynamic() const { return getWidth() == kDynamic; }
-
-//     /// Integer representation maximal bitwidth.
-//     /// Note: This is aligned with the maximum width of llvm::IntegerType.
-//     static constexpr unsigned kMaxWidth = (1 << 24) - 1;
-//     static constexpr unsigned kDynamic = (1 << 24);
-//   }];
-// }
-
 def IntegerType : PrecisionType<"Integer", "integer"> {
+  // let cppBaseClassName = "mlir::IntegerType";
   let summary = "Integer type with arbitrary precision)";
   let description = [{}];
-  let parameters = (ins);
+  let parameters = (ins "bool":$isSigned);
+  let assemblyFormat = "`<` custom<Signedness>($isSigned) `>`";
+  // let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    bool isSigned() const { return getIsSigned(); }
+    bool isUnsigned() const { return not getIsSigned(); }
+  }];
 }
+
+// def IntegerType : PrecisionType<"Integer", "integer"> {
+//   let summary = "Integer type with arbitrary precision)";
+//   let description = [{}];
+//   let parameters = (ins);
+// }
 
 def RealType : PrecisionType<"Real", "real"> {
   let summary = "Real type with arbitrary precision up to a fixed limit)";

@@ -13,6 +13,7 @@
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "mlir/Dialect/Precision/IR/Precision.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -1576,8 +1577,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (auto value = D.evaluateValue())
-    return tryEmitPrivateForMemory(*value, destType);
+  if (auto value = D.evaluateValue()) {
+  return tryEmitPrivateForMemory(*value, destType);
+  }
 
   return nullptr;
 }
@@ -1704,6 +1706,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     mlir::Type ty = CGM.getCIRType(DestType);
     if (ty.isa<mlir::cir::BoolType>())
       return builder.getCIRBoolAttr(Value.getInt().getZExtValue());
+    if (ty.isa<mlir::precision::IntegerType>())
+      return builder.getAttr<mlir::precision::IntegerAttr>(ty, Value.getInt());
     assert(ty.isa<mlir::cir::IntType>() && "expected integral type");
     return CGM.getBuilder().getAttr<mlir::cir::IntAttr>(ty, Value.getInt());
   }

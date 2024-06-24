@@ -170,27 +170,27 @@ def CmpIOp : CompareOp<"cmpi", IntegerType, Arith_CmpIPredicateAttr>;
 //===----------------------------------------------------------------------===//
 /// IntegerType operations
 //===----------------------------------------------------------------------===//
-def AddIOp : BinaryOp<"addi", IntegerType, [Commutative]>;
-def SubIOp : BinaryOp<"subi", IntegerType>;
-def MulIOp : BinaryOp<"muli", IntegerType, [Commutative]>;
-def DivSIOp : BinaryOp<"divsi", IntegerType>;
-def DivUIOp : BinaryOp<"divui", IntegerType>;
-def CDivSIOp : BinaryOp<"cdivsi", IntegerType>;
-def CDivUIOp : BinaryOp<"cdivui", IntegerType>;
-def FDivSIOp : BinaryOp<"fdivsi", IntegerType>;
-def RemSIOp : BinaryOp<"remsi", IntegerType>;
-def RemUIOp : BinaryOp<"remui", IntegerType>;
-def NegSIOp : UnaryOp<"negsi", IntegerType>;
-def AbsSIOp : UnaryOp<"abssi", IntegerType>;
-def AndOp : BinaryOp<"and", IntegerType, [Commutative]>;
-def OrOp : BinaryOp<"or", IntegerType, [Commutative]>;
-def XorOp : BinaryOp<"xor", IntegerType, [Commutative]>;
-def NotOp : UnaryOp<"not", IntegerType>;
-def ShLIOp : BitOp<"shli", IntegerType>;
-def ShRUIOp : BitOp<"shrui", IntegerType>;
-def ShRSIOp : BitOp<"shrsi", IntegerType>;
-def RotLOp : BitOp<"rotl", IntegerType>;
-def RotROp : BitOp<"rotr", IntegerType>;
+// def AddIOp : BinaryOp<"addi", IntegerType, [Commutative]>;
+// def SubIOp : BinaryOp<"subi", IntegerType>;
+// def MulIOp : BinaryOp<"muli", IntegerType, [Commutative]>;
+// def DivSIOp : BinaryOp<"divsi", IntegerType>;
+// def DivUIOp : BinaryOp<"divui", IntegerType>;
+// def CDivSIOp : BinaryOp<"cdivsi", IntegerType>;
+// def CDivUIOp : BinaryOp<"cdivui", IntegerType>;
+// def FDivSIOp : BinaryOp<"fdivsi", IntegerType>;
+// def RemSIOp : BinaryOp<"remsi", IntegerType>;
+// def RemUIOp : BinaryOp<"remui", IntegerType>;
+// def NegSIOp : UnaryOp<"negsi", IntegerType>;
+// def AbsSIOp : UnaryOp<"abssi", IntegerType>;
+// def AndOp : BinaryOp<"and", IntegerType, [Commutative]>;
+// def OrOp : BinaryOp<"or", IntegerType, [Commutative]>;
+// def XorOp : BinaryOp<"xor", IntegerType, [Commutative]>;
+// def NotOp : UnaryOp<"not", IntegerType>;
+// def ShLIOp : BitOp<"shli", IntegerType>;
+// def ShRUIOp : BitOp<"shrui", IntegerType>;
+// def ShRSIOp : BitOp<"shrsi", IntegerType>;
+// def RotLOp : BitOp<"rotl", IntegerType>;
+// def RotROp : BitOp<"rotr", IntegerType>;
 // below are low-level ops, see APInt
 // def SetBitOp : BitOp<"setbit", IntegerType>;
 // def ClrBitOp : BitOp<"clrbit", IntegerType>;
@@ -242,11 +242,12 @@ def RotROp : BitOp<"rotr", IntegerType>;
 /// Convertion operations
 //===----------------------------------------------------------------------===//
 def CIToIOp : ConvertOp<"citoi", AnyInteger, IntegerType>;
-def IToCIOp : ConvertOp<"itoci", IntegerType, AnyInteger>;
-def CFToUIOp : ConvertOp<"cftoui", AnyFloat, IntegerType>;
-def CFToSIOp : ConvertOp<"cftoui", AnyFloat, IntegerType>;
-def UIToCFOp : ConvertOp<"uitocf", IntegerType, AnyFloat>;
-def SIToCFOp : ConvertOp<"sitocf", IntegerType, AnyFloat>;
+// def IToCIOp : ConvertOp<"itoci", IntegerType, AnyInteger>;
+// def CFToUIOp : ConvertOp<"cftoui", AnyFloat, IntegerType>;
+// def CFToSIOp : ConvertOp<"cftoui", AnyFloat, IntegerType>;
+// def UIToCFOp : ConvertOp<"uitocf", IntegerType, AnyFloat>;
+// def SIToCFOp : ConvertOp<"sitocf", IntegerType, AnyFloat>;
+
 // def UIToFOp : ConvertOp<"uitof", IntegerType, FloatingPointType>;
 // def UIToPOp : ConvertOp<"uitop", IntegerType, PositType>;
 // def UIToXOp : ConvertOp<"uitox", IntegerType, FixedPointType>;
