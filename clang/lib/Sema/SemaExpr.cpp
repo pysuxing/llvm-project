@@ -15125,7 +15125,6 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   checkTypeSupport(LHSExpr->getType(), OpLoc, /*ValueDecl*/ nullptr);
   checkTypeSupport(RHSExpr->getType(), OpLoc, /*ValueDecl*/ nullptr);
 
-  // RODSFIXME implement all these below for rods types
   switch (Opc) {
   case BO_Assign:
     ResultTy = CheckAssignmentOperands(LHS.get(), RHS, OpLoc, QualType(), Opc);

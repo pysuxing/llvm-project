@@ -41,6 +41,9 @@ def CIR_IntegerType : CIR_Type<"APInteger", "apint"> {
   let extraClassDeclaration = [{
     bool isSigned() const { return getIsSigned(); }
     bool isUnsigned() const { return not getIsSigned(); }
+    std::string getAlias() const {
+      return (isSigned() ? 's' : 'u') + std::string("apint");
+    };
   }];
   // let genVerifyDecl = 1;
 }
@@ -521,8 +524,7 @@ def CIR_StructType : Type<CPred<"$_self.isa<::mlir::cir::StructType>()">,
 def CIR_AnyType : AnyTypeOf<[
   CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_BoolType, CIR_ArrayType,
   CIR_VectorType, CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionInfo,
-  CIR_AnyFloat, CIR_FP16, CIR_BFloat16,
-  CIR_IntegerType
+  CIR_AnyFloat, CIR_FP16, CIR_BFloat16, CIR_IntegerType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

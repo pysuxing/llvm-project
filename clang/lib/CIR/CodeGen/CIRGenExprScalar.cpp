@@ -23,7 +23,6 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "clang/CIR/Dialect/Precision/Precision.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 

@@ -14594,6 +14594,7 @@ struct IntRange {
       return IntRange(EIT->getNumBits(), EIT->isUnsigned());
 
     if (const auto *APIT = dyn_cast<APIntegerType>(T))
+      // RODSFIXME
       return IntRange(
           std::numeric_limits<decltype(IntRange(0, 0).Width)>::max(),
           APIT->isUnsigned());
@@ -14624,7 +14625,10 @@ struct IntRange {
     if (const auto *EIT = dyn_cast<BitIntType>(T))
       return IntRange(EIT->getNumBits(), EIT->isUnsigned());
     if (const auto *APIT = dyn_cast<APIntegerType>(T))
-      return IntRange(std::numeric_limits<unsigned>::max(), APIT->isUnsigned());
+      // RODSFIXME
+      return IntRange(
+          std::numeric_limits<decltype(IntRange(0, 0).Width)>::max(),
+          APIT->isUnsigned());
 
     const BuiltinType *BT = cast<BuiltinType>(T);
     assert(BT->isInteger());

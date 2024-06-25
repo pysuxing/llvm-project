@@ -24,7 +24,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/Precision/Precision.h"
 
 using namespace cir;
 using namespace clang;

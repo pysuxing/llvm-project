@@ -1465,7 +1465,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case clang::DeclSpec::TST_integer:
-    return Context.getAPIntegerType(DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned);
+    return S.BuildAPIntegerType(DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned, DS.getBeginLoc());
   case DeclSpec::TST_bitint: {
     if (!S.Context.getTargetInfo().hasBitIntType())
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "_BitInt";

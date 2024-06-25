@@ -17,7 +17,6 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "clang/CIR/Dialect/Precision/Precision.h"
 #include "clang/CIR/FnInfoOpts.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"

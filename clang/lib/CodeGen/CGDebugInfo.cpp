@@ -3746,7 +3746,7 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<AtomicType>(Ty), Unit);
 
   case Type::APInteger:
-    return CreateType(cast<APIntegerType>(Ty));
+    llvm_unreachable("Arbitary precision integer type is only possible with -fclangir.");
   case Type::BitInt:
     return CreateType(cast<BitIntType>(Ty));
   case Type::Pipe:

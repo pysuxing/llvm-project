@@ -15,7 +15,6 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "clang/CIR/Dialect/Precision/Precision.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -73,6 +72,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       if (intType.getWidth() % 8 != 0)
         return AliasResult::NoAlias;
       os << intType.getAlias();
+      return AliasResult::OverridableAlias;
+    }
+    if (auto apiType = type.dyn_cast<APIntegerType>()) {
+      os << apiType.getAlias();
       return AliasResult::OverridableAlias;
     }
     if (auto voidType = type.dyn_cast<VoidType>()) {

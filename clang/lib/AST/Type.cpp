@@ -4678,8 +4678,6 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
         return CTD->getTemplatedDecl()->hasAttr<TypeNullableAttr>();
     return ResultIfUnknown;
 
-  case Type::APInteger:
-    return false;
   case Type::Builtin:
     switch (cast<BuiltinType>(type.getTypePtr())->getKind()) {
       // Signed, unsigned, and floating-point types cannot have nullability.
@@ -4770,6 +4768,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::ObjCInterface:
   case Type::Atomic:
   case Type::Pipe:
+  case Type::APInteger:
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::ArrayParameter:

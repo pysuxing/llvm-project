@@ -825,8 +825,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   }
 
   switch (TC) {
-  case Type::APInteger:
-    return true;
   case Type::Builtin:
     // FIXME: Deal with Char_S/Char_U.
     if (cast<BuiltinType>(T1)->getKind() != cast<BuiltinType>(T2)->getKind())
@@ -1374,6 +1372,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   cast<PipeType>(T2)->getElementType()))
       return false;
     break;
+  case Type::APInteger: {
+    const auto *Int1 = cast<APIntegerType>(T1);
+    const auto *Int2 = cast<APIntegerType>(T2);
+    if (Int1->isUnsigned() != Int2->isUnsigned())
+      return false;
+    break;
+  }
   case Type::BitInt: {
     const auto *Int1 = cast<BitIntType>(T1);
     const auto *Int2 = cast<BitIntType>(T2);

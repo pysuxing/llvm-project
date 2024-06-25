@@ -99,8 +99,6 @@ namespace clang {
     TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
     TST_integer,
-    // TST_real,
-    // TST_posit,
     TST_error // erroneous type
   };
 

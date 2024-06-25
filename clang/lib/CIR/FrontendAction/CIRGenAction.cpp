@@ -25,7 +25,6 @@
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/Precision/Precision.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CIR/Passes.h"
 #include "clang/CodeGen/BackendUtil.h"

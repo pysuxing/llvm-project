@@ -11737,7 +11737,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
     return GCCTypeClass::BitInt;
   case Type::APInteger:
     // RODSFIXME
-    return GCCTypeClass::Pointer;
+    return GCCTypeClass::Integer;
 
   case Type::LValueReference:
   case Type::RValueReference:

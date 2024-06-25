@@ -116,5 +116,3 @@ def AtomicType : TypeNode<Type>;
 def BitIntType : TypeNode<Type>;
 def DependentBitIntType : TypeNode<Type>, AlwaysDependent;
 def APIntegerType : TypeNode<Type>;
-// def RealType : TypeNode<Type>;
-// def PositType : TypeNode<Type>;
