@@ -188,7 +188,8 @@ OpFoldResult IToCFOp::fold(FoldAdaptor adaptor) {
                 .Case<cir::FP80Type>([](cir::FP80Type) {
                   return &llvm::APFloat::x87DoubleExtended();
                 })
-                .Case<cir::LongDoubleType>([](cir::LongDoubleType) {
+                .Case<cir::LongDoubleType>([](cir::LongDoubleType t) {
+                  // auto underlyingType = t.getUnderlying();
                   // RODSFIXME
                   return &llvm::APFloat::IEEEdouble();
                 })

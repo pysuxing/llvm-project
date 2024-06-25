@@ -741,7 +741,7 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
   case Type::APInteger:
     const auto *apit = cast<APIntegerType>(Ty);
-    ResultType = mlir::precision::IntegerType::get(Builder.getContext(), apit->isSigned());
+    ResultType = mlir::cir::APIntegerType::get(Builder.getContext(), apit->isSigned());
     break;
   }
 

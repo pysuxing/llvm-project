@@ -353,8 +353,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   if (attrType.isa<mlir::cir::IntAttr>())
     return success();
-  if (opType.isa<mlir::precision::IntegerType>()) {
-    if (attrType.isa<mlir::precision::IntegerAttr>())
+  if (opType.isa<mlir::cir::APIntegerType>()) {
+    if (attrType.isa<mlir::cir::APIntegerAttr>())
       return success();
     return op->emitOpError() << opType << " and " << attrType << " mismatch";
   }
@@ -403,7 +403,7 @@ LogicalResult CastOp::verify() {
   case cir::CastKind::int_to_bool: {
     if (!resType.isa<mlir::cir::BoolType>())
       return emitOpError() << "requires !cir.bool type for result";
-    if (!srcType.isa<mlir::cir::IntType>())
+    if (!srcType.isa<mlir::cir::IntType, mlir::cir::APIntegerType>())
       return emitOpError() << "requires !cir.int type for source";
     return success();
   }
@@ -415,9 +415,9 @@ LogicalResult CastOp::verify() {
     return success();
   }
   case cir::CastKind::integral: {
-    if (!resType.isa<mlir::cir::IntType>())
+    if (!resType.isa<mlir::cir::IntType, mlir::cir::APIntegerType>())
       return emitOpError() << "requires !cir.int type for result";
-    if (!srcType.isa<mlir::cir::IntType>())
+    if (!srcType.isa<mlir::cir::IntType, mlir::cir::APIntegerType>())
       return emitOpError() << "requires !cir.int type for source";
     return success();
   }
@@ -456,21 +456,21 @@ LogicalResult CastOp::verify() {
   case cir::CastKind::float_to_int: {
     if (!srcType.isa<mlir::cir::CIRFPTypeInterface>())
       return emitOpError() << "requires !cir.float type for source";
-    if (!resType.dyn_cast<mlir::cir::IntType>())
+    if (!resType.isa<mlir::cir::IntType, mlir::cir::APIntegerType>())
       return emitOpError() << "requires !cir.int type for result";
     return success();
   }
   case cir::CastKind::int_to_ptr: {
-    if (!srcType.dyn_cast<mlir::cir::IntType>())
+    if (!srcType.isa<mlir::cir::IntType>())
       return emitOpError() << "requires !cir.int type for source";
-    if (!resType.dyn_cast<mlir::cir::PointerType>())
+    if (!resType.isa<mlir::cir::PointerType>())
       return emitOpError() << "requires !cir.ptr type for result";
     return success();
   }
   case cir::CastKind::ptr_to_int: {
-    if (!srcType.dyn_cast<mlir::cir::PointerType>())
+    if (!srcType.isa<mlir::cir::PointerType>())
       return emitOpError() << "requires !cir.ptr type for source";
-    if (!resType.dyn_cast<mlir::cir::IntType>())
+    if (!resType.isa<mlir::cir::IntType>())
       return emitOpError() << "requires !cir.int type for result";
     return success();
   }
@@ -484,12 +484,12 @@ LogicalResult CastOp::verify() {
   case cir::CastKind::bool_to_int: {
     if (!srcType.isa<mlir::cir::BoolType>())
       return emitOpError() << "requires !cir.bool type for source";
-    if (!resType.isa<mlir::cir::IntType>())
+    if (!resType.isa<mlir::cir::IntType, mlir::cir::APIntegerType>())
       return emitOpError() << "requires !cir.int type for result";
     return success();
   }
   case cir::CastKind::int_to_float: {
-    if (!srcType.isa<mlir::cir::IntType>())
+    if (!srcType.isa<mlir::cir::IntType, mlir::cir::APIntegerType>())
       return emitOpError() << "requires !cir.int type for source";
     if (!resType.isa<mlir::cir::CIRFPTypeInterface>())
       return emitOpError() << "requires !cir.float type for result";

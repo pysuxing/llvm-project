@@ -215,6 +215,30 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
   let hasCustomAssemblyFormat = 1;
 }
 
+def APIntegerAttr : CIR_Attr<"APInteger", "apint", [TypedAttrInterface]> {
+  let summary = "An attribute containing an arbitarty precision integer value";
+  let description = [{}];
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
+  let assemblyFormat = "`<` $value `>`";
+  let extraClassDeclaration = [{
+    using ValueType = APInt;
+  }];
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type, "const APInt &":$value), [{
+      return $_get(type.getContext(), type, value);
+    }]>,
+    // AttrBuilder<(ins "const APSInt &":$value), [{
+    //   auto type = precision::IntegerType::get($_ctxt, value.isSigned());
+    //   return $_get($_ctxt, type, value);
+    // }]>,
+    // AttrBuilder<(ins "ArrayRef<uint64_t>":$limbs, "bool":$isSigned), [{
+    //   auto type = precision::IntegerType::get($_ctxt, isSigned);
+    //   APInt api(64 * limbs.size(), limbs);
+    //   return $_get($_ctxt, type, api);
+    // }]>
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // FPAttr
 //===----------------------------------------------------------------------===//

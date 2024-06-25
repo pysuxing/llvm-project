@@ -48,6 +48,26 @@ static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
 
 static void printConstPtr(mlir::AsmPrinter &p, mlir::IntegerAttr value);
 
+namespace mlir {
+
+AsmPrinter &operator<<(AsmPrinter &printer, const llvm::APInt &value) {
+  llvm::SmallString<64> str;
+  value.toString(str, 16, false);
+  return printer << str;
+}
+
+template <> struct FieldParser<llvm::APInt> {
+  static FailureOr<llvm::APInt> parse(AsmParser &parser) {
+    llvm::APInt value;
+    auto res = parser.parseOptionalInteger(value);
+    if (res.has_value() and res.value().succeeded())
+      return value;
+    return failure();
+  }
+};
+
+} // namespace mlir
+
 #define GET_ATTRDEF_CLASSES
 #include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
 

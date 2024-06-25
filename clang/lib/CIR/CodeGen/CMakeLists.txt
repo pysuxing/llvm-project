@@ -55,7 +55,6 @@ add_clang_library(clangCIR
   clangLex
   ${dialect_libs}
   MLIRCIR
-  MLIRPrecision
   MLIRCIRTransforms
   MLIRCIRInterfaces
   MLIRAffineToStandard
@@ -78,5 +77,3 @@ add_clang_library(clangCIR
   MLIRTargetLLVMIRExport
   MLIRTransforms
 )
-
-message(STATUS "====== ${dialect_libs}")

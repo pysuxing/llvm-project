@@ -1706,8 +1706,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     mlir::Type ty = CGM.getCIRType(DestType);
     if (ty.isa<mlir::cir::BoolType>())
       return builder.getCIRBoolAttr(Value.getInt().getZExtValue());
-    if (ty.isa<mlir::precision::IntegerType>())
-      return builder.getAttr<mlir::precision::IntegerAttr>(ty, Value.getInt());
+    if (ty.isa<mlir::cir::APIntegerType>())
+      return builder.getAttr<mlir::cir::APIntegerAttr>(ty, Value.getInt());
     assert(ty.isa<mlir::cir::IntType>() && "expected integral type");
     return CGM.getBuilder().getAttr<mlir::cir::IntAttr>(ty, Value.getInt());
   }

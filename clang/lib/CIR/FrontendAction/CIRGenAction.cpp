@@ -428,7 +428,6 @@ void CIRGenAction::ExecuteAction() {
   mlirContext->getOrLoadDialect<mlir::cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::func::FuncDialect>();
   mlirContext->getOrLoadDialect<mlir::memref::MemRefDialect>();
-  mlirContext->getOrLoadDialect<mlir::precision::PrecisionDialect>();
 
   // TODO: unwrap this -- this exists because including the `OwningModuleRef` in
   // CIRGenAction's header would require linking the Frontend against MLIR.

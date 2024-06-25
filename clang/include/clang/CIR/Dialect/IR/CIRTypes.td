@@ -31,6 +31,21 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 }
 
 //===----------------------------------------------------------------------===//
+// IntegerType
+//===----------------------------------------------------------------------===//
+def CIR_IntegerType : CIR_Type<"APInteger", "apint"> {
+  let summary = "Integer type with arbitrary precision)";
+  let description = [{}];
+  let parameters = (ins "bool":$isSigned);
+  let assemblyFormat = "`<` custom<Signedness>($isSigned) `>`";
+  let extraClassDeclaration = [{
+    bool isSigned() const { return getIsSigned(); }
+    bool isUnsigned() const { return not getIsSigned(); }
+  }];
+  // let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // IntType
 //===----------------------------------------------------------------------===//
 
@@ -193,8 +208,9 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 
 // Constraints
 
+def CIR_AnyInt: AnyTypeOf<[CIR_IntType, CIR_IntegerType]>;
 def CIR_AnyFloat: AnyTypeOf<[CIR_Single, CIR_Double, CIR_FP80, CIR_LongDouble]>;
-def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType]>;
+def CIR_AnyIntOrFloat: AnyTypeOf<[CIR_AnyFloat, CIR_IntType, CIR_IntegerType]>;
 
 //===----------------------------------------------------------------------===//
 // PointerType
@@ -505,7 +521,8 @@ def CIR_StructType : Type<CPred<"$_self.isa<::mlir::cir::StructType>()">,
 def CIR_AnyType : AnyTypeOf<[
   CIR_IntType, CIR_PointerType, CIR_DataMemberType, CIR_BoolType, CIR_ArrayType,
   CIR_VectorType, CIR_FuncType, CIR_VoidType, CIR_StructType, CIR_ExceptionInfo,
-  CIR_AnyFloat, CIR_FP16, CIR_BFloat16
+  CIR_AnyFloat, CIR_FP16, CIR_BFloat16,
+  CIR_IntegerType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

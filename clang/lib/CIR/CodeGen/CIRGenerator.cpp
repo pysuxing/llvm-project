@@ -61,7 +61,6 @@ void CIRGenerator::Initialize(ASTContext &astCtx) {
   mlirCtx->getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   mlirCtx->getOrLoadDialect<mlir::memref::MemRefDialect>();
   mlirCtx->getOrLoadDialect<mlir::omp::OpenMPDialect>();
-  mlirCtx->getOrLoadDialect<mlir::precision::PrecisionDialect>();
   CGM = std::make_unique<CIRGenModule>(*mlirCtx.get(), astCtx, codeGenOpts,
                                        Diags);
   auto mod = CGM->getModule();
