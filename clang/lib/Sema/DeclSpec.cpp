@@ -1289,7 +1289,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       TypeSpecType = TST_int; // unsigned -> unsigned int, signed -> signed int.
     else if (TypeSpecType != TST_int && TypeSpecType != TST_int128 &&
              TypeSpecType != TST_char && TypeSpecType != TST_wchar &&
-             !IsFixedPointType && TypeSpecType != TST_bitint) {
+             !IsFixedPointType && TypeSpecType != TST_bitint && TypeSpecType != TST_integer) {
       S.Diag(TSSLoc, diag::err_invalid_sign_spec)
         << getSpecifierName((TST)TypeSpecType, Policy);
       // signed double -> double.

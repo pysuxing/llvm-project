@@ -1901,10 +1901,6 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
   }
 
   assert(CastKind.has_value() && "Internal error: CastKind not set.");
-  // if (CastKind == mlir::cir::CastKind::integral and
-  //     isa<mlir::cir::APIntegerType>(DstTy) and
-  //     isa<mlir::cir::IntType>(SrcTy))
-  //   return Builder.create<mlir::precision::CIToIOp>(Src.getLoc(), DstTy, Src);
   return Builder.create<mlir::cir::CastOp>(Src.getLoc(), FullDstTy, *CastKind,
                                            Src);
 }

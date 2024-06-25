@@ -386,7 +386,7 @@ public:
   bool isInt64Ty(mlir::Type i) {
     return i == typeCache.UInt64Ty || i == typeCache.SInt64Ty;
   }
-  bool isInt(mlir::Type i) { return i.isa<mlir::cir::IntType>(); }
+  bool isInt(mlir::Type i) { return i.isa<mlir::cir::IntType, mlir::cir::APIntegerType>(); }
 
   mlir::cir::LongDoubleType
   getLongDoubleTy(const llvm::fltSemantics &format) const {
