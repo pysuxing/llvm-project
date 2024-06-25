@@ -1,7 +1,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Precision/IR/Precision.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -9,12 +8,17 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Support/LogicalResult.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/Precision/Precision.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 
 namespace mlir {
@@ -25,8 +29,7 @@ AsmPrinter &operator<<(AsmPrinter &printer, const llvm::APInt &value) {
   return printer << str;
 }
 
-template <>
-struct FieldParser<llvm::APInt> {
+template <> struct FieldParser<llvm::APInt> {
   static FailureOr<llvm::APInt> parse(AsmParser &parser) {
     llvm::APInt value;
     auto res = parser.parseOptionalInteger(value);
@@ -117,83 +120,99 @@ PositType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
                            << "), expecting exponentSize+3 <= width <= 128";
 }
 
+bool CIToIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == 1 and outputs.size() == 1);
+  return llvm::isa<cir::IntType>(inputs.front()) and
+         llvm::isa<IntegerType>(outputs.front());
+}
+bool IToCIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == 1 and outputs.size() == 1);
+  return llvm::isa<IntegerType>(inputs.front()) and
+         llvm::isa<cir::IntType>(outputs.front());
+}
+bool CFToIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == 1 and outputs.size() == 1);
+  return llvm::isa<cir::CIRFPTypeInterface>(inputs.front()) and
+         llvm::isa<IntegerType>(outputs.front());
+}
+bool IToCFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == 1 and outputs.size() == 1);
+  return llvm::isa<IntegerType>(inputs.front()) and
+         llvm::isa<cir::CIRFPTypeInterface>(outputs.front());
+}
+
 OpFoldResult CIToIOp::fold(FoldAdaptor adaptor) {
   auto ty = getType();
-  // RODSFIXME precision::IntegerAttr should be used here
-  return constFoldCastOp<mlir::IntegerAttr, mlir::IntegerAttr>(
+  return constFoldCastOp<cir::IntAttr, precision::IntegerAttr, llvm::APInt,
+                         precision::IntegerAttr::ValueType>(
       adaptor.getOperands(), ty, [](const llvm::APInt &api, bool &status) {
         status = true;
         return api;
       });
 }
-// OpFoldResult IToCIOp::fold(FoldAdaptor adaptor) {
-//   auto ty = getType();
-//   return constFoldCastOp<mlir::IntegerAttr, mlir::IntegerAttr>(
-//       adaptor.getOperands(), ty, [](const llvm::APInt &api, bool &status) {
-//         status = true;
-//         return api;
-//       });
-// }
-// OpFoldResult UIToCFOp::fold(FoldAdaptor adaptor) {
-//   auto ty = getType();
-//   return constFoldCastOp<mlir::IntegerAttr, mlir::FloatAttr>(
-//       adaptor.getOperands(), ty, [&ty](const llvm::APInt &api, bool &status)
-//       {
-//         status = true;
-//         APFloat apf(ty.getFloatSemantics(), APInt::getZero(ty.getWidth()));
-//         apf.convertFromAPInt(api, /*IsSigned=*/false,
-//                              APFloat::rmNearestTiesToEven);
-//         return apf;
-//       });
-// }
-// OpFoldResult SIToCFOp::fold(FoldAdaptor adaptor) {
-//   auto ty = getType();
-//   return constFoldCastOp<mlir::IntegerAttr, mlir::FloatAttr>(
-//       adaptor.getOperands(), ty, [&ty](const llvm::APInt &api, bool &status)
-//       {
-//         status = true;
-//         APFloat apf(ty.getFloatSemantics(), APInt::getZero(ty.getWidth()));
-//         apf.convertFromAPInt(api, /*IsSigned=*/true,
-//                              APFloat::rmNearestTiesToEven);
-//         return apf;
-//       });
-// }
-// OpFoldResult CFToUIOp::fold(FoldAdaptor adaptor) {
-//   auto ty = getType();
-//   return constFoldCastOp<FloatAttr, IntegerAttr>(
-//       adaptor.getOperands(), ty, [](const APFloat &mpf, bool &castStatus) {
-//         bool ignored;
-//         APSInt api(APFloat::semanticsIntSizeInBits(mpf.getSemantics(),
-//                                                    /*IsSigned=*/false));
-//         castStatus = APFloat::opInvalidOp !=
-//                      mpf.convertToInteger(api, APFloat::rmTowardZero,
-//                      &ignored);
-//         return api;
-//       });
-// }
-// OpFoldResult CFToSIOp::fold(FoldAdaptor adaptor) {
-//   auto ty = getType();
-//   return constFoldCastOp<FloatAttr, IntegerAttr>(
-//       adaptor.getOperands(), ty, [](const APFloat &mpf, bool &castStatus) {
-//         bool ignored;
-//         APSInt api(APFloat::semanticsIntSizeInBits(mpf.getSemantics(),
-//                                                    /*IsSigned=*/true));
-//         castStatus = APFloat::opInvalidOp !=
-//                      mpf.convertToInteger(api, APFloat::rmTowardZero,
-//                      &ignored);
-//         return api;
-//       });
-// }
+OpFoldResult IToCIOp::fold(FoldAdaptor adaptor) {
+  auto ty = getType();
+  return constFoldCastOp<precision::IntegerAttr, cir::IntAttr,
+                         precision::IntegerAttr::ValueType, llvm::APInt>(
+      adaptor.getOperands(), ty, [](const llvm::APInt &api, bool &status) {
+        status = true;
+        return api;
+      });
+}
+OpFoldResult CFToIOp::fold(FoldAdaptor adaptor) {
+  auto ty = getType();
+  return constFoldCastOp<cir::FPAttr, precision::IntegerAttr, llvm::APFloat,
+                         precision::IntegerAttr::ValueType>(
+      adaptor.getOperands(), ty, [](const APFloat &apf, bool &castStatus) {
+        bool isExact;
+        APSInt api(APFloat::semanticsIntSizeInBits(apf.getSemantics(), true));
+        castStatus = APFloat::opInvalidOp !=
+                     apf.convertToInteger(api, APFloat::rmTowardZero, &isExact);
+        return api;
+      });
+}
+OpFoldResult IToCFOp::fold(FoldAdaptor adaptor) {
+  auto ty = getType();
+  return constFoldCastOp<precision::IntegerAttr, cir::FPAttr,
+                         precision::IntegerAttr::ValueType, llvm::APFloat>(
+      adaptor.getOperands(), ty, [&ty](const llvm::APInt &api, bool &status) {
+        status = false;
+        const llvm::fltSemantics *semantics =
+            llvm::TypeSwitch<Type, const llvm::fltSemantics *>(ty)
+                .Case<cir::SingleType>([](cir::SingleType) {
+                  return &llvm::APFloat::IEEEsingle();
+                })
+                .Case<cir::DoubleType>([](cir::DoubleType) {
+                  return &llvm::APFloat::IEEEdouble();
+                })
+                .Case<cir::FP80Type>([](cir::FP80Type) {
+                  return &llvm::APFloat::x87DoubleExtended();
+                })
+                .Case<cir::LongDoubleType>([](cir::LongDoubleType) {
+                  // RODSFIXME
+                  return &llvm::APFloat::IEEEdouble();
+                })
+                .Default([](Type) { return nullptr; });
+        if (semantics) {
+          status = true;
+          APFloat apf(*semantics);
+          apf.convertFromAPInt(api, /*IsSigned=*/true, // RODSFIXME
+                               APFloat::rmNearestTiesToEven);
+          return apf;
+        }
+        return APFloat(0.0); // To suppress the compiler warning
+      });
+}
 } // namespace precision
 } // namespace mlir
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/Precision/IR/PrecisionOpsTypes.cpp.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOpsTypes.cpp.inc"
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Precision/IR/PrecisionAttributes.cpp.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionAttributes.cpp.inc"
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Precision/IR/PrecisionOps.cpp.inc"
-#include "mlir/Dialect/Precision/IR/PrecisionOpsDialect.cpp.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOps.cpp.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOpsDialect.cpp.inc"
 
 namespace mlir {
 namespace precision {
@@ -201,15 +220,15 @@ namespace precision {
 void PrecisionDialect::initialize() {
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Precision/IR/PrecisionAttributes.cpp.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionAttributes.cpp.inc"
       >();
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Precision/IR/PrecisionOpsTypes.cpp.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOpsTypes.cpp.inc"
       >();
   addOperations<
 #define GET_OP_LIST
-#include "mlir/Dialect/Precision/IR/PrecisionOps.cpp.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOps.cpp.inc"
       >();
 }
 

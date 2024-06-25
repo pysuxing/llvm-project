@@ -3,7 +3,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
-include "mlir/Dialect/Precision/IR/PrecisionDialect.td"
+include "clang/CIR/Dialect/Precision/PrecisionDialect.td"
 
 class PrecisionType<string name, string typeMnemonic, list<Trait> traits = []>
   : TypeDef<Precision_Dialect, name, traits> {

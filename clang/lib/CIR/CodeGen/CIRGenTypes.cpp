@@ -5,7 +5,6 @@
 #include "CallingConv.h"
 #include "TargetInfo.h"
 
-#include "mlir/Dialect/Precision/IR/Precision.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "clang/AST/Type.h"
@@ -18,6 +17,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/Precision/Precision.h"
 #include "clang/CIR/FnInfoOpts.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"

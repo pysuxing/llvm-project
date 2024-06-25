@@ -10,8 +10,10 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Dialect/Arith/IR/ArithBase.td"
-include "mlir/Dialect/Precision/IR/PrecisionTypes.td"
+include "clang/CIR/Dialect/IR/CIRTypes.td"
+include "clang/CIR/Dialect/Precision/PrecisionTypes.td"
 
+def ConventionalIntegerType : AnyTypeOf<[Builtin_Integer, Builtin_Index, CIR_IntType]>;
 def AnyIntegralType : AnyTypeOf<[IntegerType]>;
 def AnyRealType : AnyTypeOf<[RealType, FloatingPointType, PositType]>;
 def AnyArithmeticType : AnyTypeOf<[IntegerType, RealType, FixedPointType, FloatingPointType, PositType]>;
@@ -115,13 +117,13 @@ class ConvertOp<string mnemonic, Type FromTy, Type ToTy, list<Trait> traits = []
   let results = (outs ToTy:$out);
   let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
   // NOTE TypeDef.cppType is qualified with C++ namespace, thus more suitable than Type.cppClassName,
-  // however, there exists no TypeDef for mlir::FloatType
-  let extraClassDefinition = !subst("$out", ToTy.cppClassName, !subst("$in", FromTy.cppClassName, [{
-    bool $cppClass::areCastCompatible(TypeRange inputs, TypeRange outputs) {
-      assert(inputs.size() == 1 and outputs.size() == 1);
-      return llvm::isa<$in>(inputs.front()) and llvm::isa<$out>(outputs.front());
-    }
-  }]));
+  // however, there exists no TypeDef for CIR_AnyFloat
+  // let extraClassDefinition = !subst("$out", ToTy.cppClassName, !subst("$in", FromTy.cppClassName, [{
+  //   bool $cppClass::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  //     assert(inputs.size() == 1 and outputs.size() == 1);
+  //     return llvm::isa<$in>(inputs.front()) and llvm::isa<$out>(outputs.front());
+  //   }
+  // }]));
   let hasFolder = 1;
 }
 
@@ -241,13 +243,10 @@ def CmpIOp : CompareOp<"cmpi", IntegerType, Arith_CmpIPredicateAttr>;
 //===----------------------------------------------------------------------===//
 /// Convertion operations
 //===----------------------------------------------------------------------===//
-def CIToIOp : ConvertOp<"citoi", AnyInteger, IntegerType>;
-// def IToCIOp : ConvertOp<"itoci", IntegerType, AnyInteger>;
-// def CFToUIOp : ConvertOp<"cftoui", AnyFloat, IntegerType>;
-// def CFToSIOp : ConvertOp<"cftoui", AnyFloat, IntegerType>;
-// def UIToCFOp : ConvertOp<"uitocf", IntegerType, AnyFloat>;
-// def SIToCFOp : ConvertOp<"sitocf", IntegerType, AnyFloat>;
-
+def CIToIOp : ConvertOp<"citoi", CIR_IntType, IntegerType>;
+def IToCIOp : ConvertOp<"itoci", IntegerType, CIR_IntType>;
+def CFToIOp : ConvertOp<"cftoi", CIR_AnyFloat, IntegerType>;
+def IToCFOp : ConvertOp<"itocf", IntegerType, CIR_AnyFloat>;
 // def UIToFOp : ConvertOp<"uitof", IntegerType, FloatingPointType>;
 // def UIToPOp : ConvertOp<"uitop", IntegerType, PositType>;
 // def UIToXOp : ConvertOp<"uitox", IntegerType, FixedPointType>;

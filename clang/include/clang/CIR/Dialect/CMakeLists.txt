@@ -18,6 +18,7 @@ function(add_clang_mlir_doc doc_filename output_file output_directory command)
 endfunction()
 
 add_subdirectory(IR)
+add_subdirectory(Precision)
 
 set(LLVM_TARGET_DEFINITIONS Passes.td)
 mlir_tablegen(Passes.h.inc -gen-pass-decls -name CIR)

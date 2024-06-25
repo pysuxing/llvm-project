@@ -3,7 +3,7 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/Dialect/Precision/IR/PrecisionDialect.td"
+include "clang/CIR/Dialect/Precision/PrecisionDialect.td"
 
 class PrecisionAttr<string name, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<Precision_Dialect, name, traits # [TypedAttrInterface]> {
@@ -19,6 +19,9 @@ def IntegerAttr : PrecisionAttr<"Integer", "integer"> {
     using ValueType = APInt;
   }];
   let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type, "const APInt &":$value), [{
+      return $_get(type.getContext(), type, value);
+    }]>,
     AttrBuilder<(ins "const APSInt &":$value), [{
       auto type = precision::IntegerType::get($_ctxt, value.isSigned());
       return $_get($_ctxt, type, value);

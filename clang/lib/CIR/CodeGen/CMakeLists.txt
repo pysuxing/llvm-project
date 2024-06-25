@@ -55,6 +55,7 @@ add_clang_library(clangCIR
   clangLex
   ${dialect_libs}
   MLIRCIR
+  MLIRPrecision
   MLIRCIRTransforms
   MLIRCIRInterfaces
   MLIRAffineToStandard

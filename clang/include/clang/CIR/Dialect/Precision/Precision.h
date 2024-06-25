@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef MLIR_DIALECT_PRECISION_IR_PRECISION_H
-#define MLIR_DIALECT_PRECISION_IR_PRECISION_H
+#ifndef CLANG_CIR_DIALECT_PRECISION_PRECISION_H
+#define CLANG_CIR_DIALECT_PRECISION_PRECISION_H
 
 #include "llvm/ADT/APInt.h"
 #include "mlir/IR/Types.h"
@@ -17,16 +17,17 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
-#include "mlir/Dialect/Precision/IR/PrecisionOpsDialect.h.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOpsDialect.h.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/Precision/IR/PrecisionOpsTypes.h.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOpsTypes.h.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/Precision/IR/PrecisionAttributes.h.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionAttributes.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Precision/IR/PrecisionOps.h.inc"
+#include "clang/CIR/Dialect/Precision/PrecisionOps.h.inc"
 
-#endif // MLIR_DIALECT_PRECISION_IR_PRECISION_H
+#endif // CLANG_CIR_DIALECT_PRECISION_PRECISION_H

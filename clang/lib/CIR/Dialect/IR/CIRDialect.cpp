@@ -15,6 +15,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/Precision/Precision.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
@@ -352,6 +353,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   if (attrType.isa<mlir::cir::IntAttr>())
     return success();
+  if (opType.isa<mlir::precision::IntegerType>()) {
+    if (attrType.isa<mlir::precision::IntegerAttr>())
+      return success();
+    return op->emitOpError() << opType << " and " << attrType << " mismatch";
+  }
 
   assert(attrType.isa<TypedAttr>() && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
