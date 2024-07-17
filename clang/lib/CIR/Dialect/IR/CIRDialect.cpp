@@ -3193,7 +3193,7 @@ LogicalResult AtomicFetch::verify() {
 LogicalResult BinOp::verify() {
   bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
 
-  if (!isa<mlir::cir::IntType>(getType()) && noWrap)
+  if (!isa<mlir::cir::IntType, mlir::cir::APIntegerType>(getType()) && noWrap)
     return emitError()
            << "only operations on integer values may have nsw/nuw flags";
 

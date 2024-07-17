@@ -1054,8 +1054,8 @@ def ShiftOp : CIR_Op<"shift", [Pure]> {
     ```
   }];
 
-  let results = (outs CIR_IntType:$result);
-  let arguments = (ins CIR_IntType:$value, CIR_IntType:$amount,
+  let results = (outs CIR_AnyInt:$result);
+  let arguments = (ins CIR_AnyInt:$value, CIR_AnyInt:$amount,
                        UnitAttr:$isShiftleft);
 
   let assemblyFormat = [{
