@@ -31,6 +31,12 @@ using namespace clang;
 
 namespace {
 
+struct PragmaPrecisionHandler : public PragmaHandler {
+  explicit PragmaPrecisionHandler() : PragmaHandler("precision") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 struct PragmaAlignHandler : public PragmaHandler {
   explicit PragmaAlignHandler() : PragmaHandler("align") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
@@ -568,6 +574,9 @@ void Parser::initializePragmaHandlers() {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
   }
+
+  PrecisionHandler = std::make_unique<PragmaPrecisionHandler>();
+  PP.AddPragmaHandler(PrecisionHandler.get());
 }
 
 void Parser::resetPragmaHandlers() {
@@ -702,6 +711,9 @@ void Parser::resetPragmaHandlers() {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
   }
+
+  PP.RemovePragmaHandler(PrecisionHandler.get());
+  PrecisionHandler.reset();
 }
 
 /// Handle the annotation token produced for #pragma unused(...)
@@ -3669,6 +3681,33 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
   std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
 
   PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+void PragmaPrecisionHandler::HandlePragma(Preprocessor &PP,
+                                          PragmaIntroducer Introducer,
+                                          Token &Tok) {
+  assert(Tok.is(tok::identifier));
+  // Incoming token is "precision" from "#pragma precision".
+  // Token PragmaName = Tok;
+
+  Token PrecisionTok;
+  PrecisionTok.startToken();
+  PrecisionTok.setKind(tok::annot_pragma_precision);
+  PrecisionTok.setLocation(Tok.getLocation());
+  PrecisionTok.setAnnotationEndLoc(Tok.getLocation());
+  PrecisionTok.setAnnotationValue(static_cast<void *>(Tok.getIdentifierInfo()));
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "precision";
+    return;
+  }
+
+  auto TokenArray = std::make_unique<Token[]>(1);
+  TokenArray[0] = PrecisionTok;
+  PP.EnterTokenStream(std::move(TokenArray), 1,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 

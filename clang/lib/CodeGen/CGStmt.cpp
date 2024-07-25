@@ -709,11 +709,28 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitStmt(S.getSubStmt());
 }
 
+struct PrecisionRegion {
+  CGBuilderTy *Builder = nullptr;
+  llvm::Value *Anchor = nullptr;
+  void init(CGBuilderTy &Builder) {
+    this->Builder = &Builder;
+    this->Anchor = Builder.CreateIntrinsic(
+        Builder.getPtrTy(), llvm::Intrinsic::precision_begin, {});
+      // BeginCall->addMetadata();
+  }
+  ~PrecisionRegion() {
+    if (Builder and Anchor)
+      Builder->CreateIntrinsic(Builder->getVoidTy(),
+                               llvm::Intrinsic::precision_end, Anchor);
+  }
+};
+
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
   bool noinline = false;
   bool alwaysinline = false;
   const CallExpr *musttail = nullptr;
+  PrecisionRegion guard;
 
   for (const auto *A : S.getAttrs()) {
     switch (A->getKind()) {
@@ -740,6 +757,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
         llvm::Value *AssumptionVal = EvaluateExprAsBool(Assumption);
         Builder.CreateAssumption(AssumptionVal);
       }
+    } break;
+    case attr::Precision: {
+      guard.init(Builder);
     } break;
     }
   }

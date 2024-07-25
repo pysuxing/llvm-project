@@ -525,6 +525,11 @@ Retry:
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return StmtEmpty();
+
+  case tok::annot_pragma_precision:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    return ParsePragmaPrecision(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -2503,6 +2508,28 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
   // See PR46336.
   if (Attrs.Range.getBegin().isInvalid())
     Attrs.Range.setBegin(StartLoc);
+
+  return S;
+}
+
+StmtResult Parser::ParsePragmaPrecision(StmtVector &Stmts,
+                                        ParsedStmtContext StmtCtx,
+                                        SourceLocation *TrailingElseLoc,
+                                        ParsedAttributes &Attrs) {
+  assert(Tok.is(tok::annot_pragma_precision));
+  ParsedAttributes PrecisionAttrs(AttrFactory);
+  PrecisionAttrs.addNew(static_cast<IdentifierInfo *>(Tok.getAnnotationValue()), Tok.getAnnotationRange(),
+                        nullptr, Tok.getLocation(), nullptr, 0,
+                        ParsedAttr::Form::Pragma());
+
+  ConsumeAnnotationToken();
+  // Get the next statement.
+  MaybeParseCXX11Attributes(Attrs);
+
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  StmtResult S = ParseStatementOrDeclarationAfterAttributes(
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs);
+  Attrs.takeAllFrom(PrecisionAttrs);
 
   return S;
 }
