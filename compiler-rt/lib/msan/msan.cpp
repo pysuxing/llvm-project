@@ -56,12 +56,11 @@ THREADLOCAL u64 __msan_retval_tls[kMsanRetvalTlsSize / sizeof(u64)];
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u32 __msan_retval_origin_tls;
 
-SANITIZER_INTERFACE_ATTRIBUTE
-ALIGNED(16) THREADLOCAL u64 __msan_va_arg_tls[kMsanParamTlsSize / sizeof(u64)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u64
+    __msan_va_arg_tls[kMsanParamTlsSize / sizeof(u64)];
 
-SANITIZER_INTERFACE_ATTRIBUTE
-ALIGNED(16)
-THREADLOCAL u32 __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
+alignas(16) SANITIZER_INTERFACE_ATTRIBUTE THREADLOCAL u32
+    __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
 
 SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
@@ -104,7 +103,7 @@ int msan_report_count = 0;
 // in some configurations (e.g., "relocation R_X86_64_PC32 out of range:
 // ... is not in [-2147483648, 2147483647]; references section '.bss'").
 // We use kNumStackOriginDescrs * (sizeof(char*) + sizeof(uptr)) == 64MB.
-#ifdef SANITIZER_PPC
+#if SANITIZER_PPC
 // soft_rss_limit test (release_origin.c) fails on PPC if kNumStackOriginDescrs
 // is too high
 static const uptr kNumStackOriginDescrs = 1 * 1024 * 1024;
