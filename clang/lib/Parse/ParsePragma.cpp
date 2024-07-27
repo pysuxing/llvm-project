@@ -3761,36 +3761,35 @@ static bool isSupportedPrecisionType(tok::TokenKind Kind) {
 }
 
 static bool ParseCommaSeperatedTokenList(Preprocessor &PP, Token &Tok,
-                                         SmallVectorImpl<Token> &Tokens,
-                                         bool IsTypeKeyword) {
-  auto IsExpectedToken = [&](tok::TokenKind Kind) -> bool {
-    return IsTypeKeyword? Kind == tok::identifier : isSupportedPrecisionType(Kind);
-  };
-  auto *ExpectedTokenKind = IsTypeKeyword ? "type keywords" : "identifier";
+                                         SmallVectorImpl<Token> &Tokens) {
   assert(Tok.is(tok::l_paren) || Tok.is(tok::l_square));
-  auto LeftKind = Tok.getKind();
-  auto RightKind = (LeftKind == tok::l_paren ? tok::r_paren : tok::r_square);
-  auto DiagID =
-      (LeftKind == tok::l_paren ? diag::err_pragma_precision_expect_rparen
-                                : diag::err_pragma_precision_expect_rsquare);
+  bool IsType = Tok.is(tok::l_square);
+  auto IsExpectedToken = [&](tok::TokenKind Kind) -> bool {
+    return IsType ? isSupportedPrecisionType(Kind) : Kind == tok::identifier;
+  };
+  auto *ExpectedTokenKind = IsType ? "types" : "identifiers";
   // Lex the first identifier
   PP.Lex(Tok);
-  if (IsExpectedToken(Tok.getKind())) {
-    PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind) << ExpectedTokenKind;
+  if (not IsExpectedToken(Tok.getKind())) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind)
+        << ExpectedTokenKind;
     return true;
   }
   Tokens.push_back(Tok);
   // Lex other identifiers, if exists
   for (PP.Lex(Tok); Tok.is(tok::comma); PP.Lex(Tok)) {
     PP.Lex(Tok);
-    if (IsExpectedToken(Tok.getKind())) {
-      PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind) << ExpectedTokenKind;
+    if (not IsExpectedToken(Tok.getKind())) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind)
+          << ExpectedTokenKind;
       return true;
     }
     Tokens.push_back(Tok);
   }
-  if (Tok.getKind() != RightKind) {
-    PP.Diag(Tok.getLocation(), DiagID);
+  if (Tok.getKind() != (IsType ? tok::r_square : tok::r_paren)) {
+    PP.Diag(Tok.getLocation(),
+            (IsType ? diag::err_pragma_precision_expect_rparen
+                    : diag::err_pragma_precision_expect_rsquare));
     return true;
   }
   // Lex one more token
@@ -3807,11 +3806,11 @@ static bool ParsePrecisionInfo(Preprocessor &PP, Token &Tok,
   while (Tok.isNot(tok::eod)) {
     PragmaPrecisionInfo::VecTy Vars, Types;
     if (Tok.is(tok::l_paren)) {
-      if (ParseCommaSeperatedTokenList(PP, Tok, Vars, false))
+      if (ParseCommaSeperatedTokenList(PP, Tok, Vars))
         return true;
     }
     if (Tok.is(tok::l_square)) {
-      if (ParseCommaSeperatedTokenList(PP, Tok, Types, true))
+      if (ParseCommaSeperatedTokenList(PP, Tok, Types))
         return true;
       if (Types.size() == 1)
         PP.Diag(Types.front().getLocation(), diag::warn_pragma_precision_expect_tokenkind);
