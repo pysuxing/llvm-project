@@ -3813,6 +3813,8 @@ static bool ParsePrecisionInfo(Preprocessor &PP, Token &Tok,
     if (Tok.is(tok::l_square)) {
       if (ParseCommaSeperatedTokenList(PP, Tok, Types, true))
         return true;
+      if (Types.size() == 1)
+        PP.Diag(Types.front().getLocation(), diag::warn_pragma_precision_expect_tokenkind);
     }
     // report if both () and [] are not available
     if (Vars.empty() and Types.empty()) {

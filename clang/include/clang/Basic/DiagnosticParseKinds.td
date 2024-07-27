@@ -1639,6 +1639,8 @@ def err_pragma_precision_expect_rparen : Error<
   "expected ')'">;
 def err_pragma_precision_expect_rsquare : Error<
   "expected ']'">;
+def warn_pragma_precision_expect_tokenkind : Warning<
+  "only one candidate type specified and precision tuning ignored">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
