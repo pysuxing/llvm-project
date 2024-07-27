@@ -4713,22 +4713,21 @@ def ClspvLibclcBuiltin: InheritableAttr {
 
 def Precision : StmtAttr {
   let Spellings = [Pragma<"", "precision">];
-  let Args = [VariadicIdentifierArgument<"Vars">];
+  let Args = [VariadicIdentifierArgument<"Vars">, VariadicIdentifierArgument<"Types">];
   let AdditionalMembers = [{
-    IdentifierInfo *getVarName(unsigned Index) const {
-      return *(vars_begin() + Index);
-    }
     void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
       if (vars_size()) {
-        OS << " (" << getVarName(0)->getName();
-        for (unsigned i = 1; i < vars_size(); ++i) {
-          OS << ", " << getVarName(i)->getName();
-        }
+        OS << '(';
+        llvm::interleaveComma(vars(), OS);
         OS << ')';
+      }
+      if (types_size()) {
+        OS << '[';
+        llvm::interleaveComma(types(), OS);
+        OS << ']';
       }
     }
   }];
 
   let Documentation = [Undocumented];
-  // let HasCustomParsing = 1;
 }

@@ -35,6 +35,7 @@ namespace clang {
   class DeclGroupRef;
   class DiagnosticBuilder;
   struct LoopHint;
+  struct PragmaPrecisionSpec;
   class Parser;
   class ParsingDeclRAIIObject;
   class ParsingDeclSpec;
@@ -849,6 +850,10 @@ private:
   /// Handle the annotation token produced for
   /// #pragma clang loop and #pragma unroll.
   bool HandlePragmaLoopHint(LoopHint &Hint);
+
+  /// Handle the annotation token produced for
+  /// # pragma precision
+  void HandlePragmaPrecision(PragmaPrecisionSpec &Spec);
 
   bool ParsePragmaAttributeSubjectMatchRuleSet(
       attr::ParsedSubjectMatchRuleSet &SubjectMatchRules,

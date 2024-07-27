@@ -2745,7 +2745,7 @@ def int_experimental_convergence_loop
 
 //===----------------------------------------------------------------------===//
 //===------- Precision Intrinsics -----------------------------------------===//
-def int_precision_begin : Intrinsic<[llvm_ptr_ty], []>;
+def int_precision_begin : Intrinsic<[llvm_ptr_ty], [llvm_metadata_ty]>;
 def int_precision_end : Intrinsic<[], [llvm_ptr_ty]>;
 
 //===----------------------------------------------------------------------===//

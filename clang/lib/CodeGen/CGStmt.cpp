@@ -722,11 +722,26 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
 struct PrecisionRegion {
   CGBuilderTy *Builder = nullptr;
   llvm::Value *Anchor = nullptr;
-  void init(CGBuilderTy &Builder) {
-    this->Builder = &Builder;
+  void init(CGBuilderTy &Builder, const PrecisionAttr *Attr) {
+    auto &Ctx = Builder.getContext();
+    auto MDStrBuilder = [&Ctx](IdentifierInfo *ID) {
+      return llvm::MDString::get(Ctx, ID->getName());
+    };
+    llvm::SmallVector<llvm::Metadata *> Vars, Types;
+    if (Attr->vars_size())
+      llvm::transform(Attr->vars(), std::back_inserter(Vars), MDStrBuilder);
+    else
+      Vars.push_back(llvm::MDString::get(Ctx, "*"));
+    if (Attr->types_size())
+      llvm::transform(Attr->types(), std::back_inserter(Types), MDStrBuilder);
+    else
+      Types.push_back(llvm::MDString::get(Ctx, "*"));
+    auto *MDVars = llvm::MDNode::get(Ctx, Vars);
+    auto *MDTypes = llvm::MDNode::get(Ctx, Types);
+    auto *MDPrecision = llvm::MDNode::get(Ctx, {MDVars, MDTypes});
     this->Anchor = Builder.CreateIntrinsic(
-        Builder.getPtrTy(), llvm::Intrinsic::precision_begin, {});
-      // BeginCall->addMetadata();
+        Builder.getPtrTy(), llvm::Intrinsic::precision_begin, llvm::MetadataAsValue::get(Ctx, MDPrecision));
+    this->Builder = &Builder;
   }
   ~PrecisionRegion() {
     if (Builder and Anchor)
@@ -769,7 +784,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       }
     } break;
     case attr::Precision: {
-      guard.init(Builder);
+      guard.init(Builder, cast<PrecisionAttr>(A));
     } break;
     }
   }

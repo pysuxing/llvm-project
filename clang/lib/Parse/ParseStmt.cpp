@@ -18,6 +18,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/Parser.h"
+#include "clang/Parse/Precision.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -2526,12 +2527,23 @@ StmtResult Parser::ParsePragmaPrecision(StmtVector &Stmts,
                                         SourceLocation *TrailingElseLoc,
                                         ParsedAttributes &Attrs) {
   assert(Tok.is(tok::annot_pragma_precision));
+  PragmaPrecisionSpec Spec;
+  HandlePragmaPrecision(Spec);
   ParsedAttributes PrecisionAttrs(AttrFactory);
-  PrecisionAttrs.addNew(static_cast<IdentifierInfo *>(Tok.getAnnotationValue()), Tok.getAnnotationRange(),
-                        nullptr, Tok.getLocation(), nullptr, 0,
-                        ParsedAttr::Form::Pragma());
+  auto *Pragma = Spec.PragmaNameLoc;
+  for (auto &[Vars, Types] : Spec.TuneSpecs) {
+    SmallVector<ArgsUnion> Args;
+    llvm::copy(Vars, std::back_inserter(Args));
+    Args.emplace_back();
+    llvm::copy(Types, std::back_inserter(Args));
+    PrecisionAttrs.addNew(Pragma->Ident, Pragma->Loc, nullptr, Pragma->Loc,
+                          Args.data(), Args.size(), ParsedAttr::Form::Pragma());
+  }
+  // If no tune spec is available, i.e., the user simply specified "#pragma precision", create an empty ParsedAttr
+  if (PrecisionAttrs.empty())
+    PrecisionAttrs.addNew(Pragma->Ident, Pragma->Loc, nullptr, Pragma->Loc,
+                          nullptr, 0, ParsedAttr::Form::Pragma());
 
-  ConsumeAnnotationToken();
   // Get the next statement.
   MaybeParseCXX11Attributes(Attrs);
 

@@ -19,6 +19,7 @@
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
+#include "clang/Parse/Precision.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
@@ -1436,6 +1437,23 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
 
   Actions.ActOnPragmaMSAllocText(FirstTok.getLocation(), Section, Functions);
   return true;
+}
+
+void Parser::HandlePragmaPrecision(PragmaPrecisionSpec &Spec) {
+  assert(Tok.is(tok::annot_pragma_precision));
+  auto &AstCtx = Actions.Context;
+  auto TokenToIDLoc = [&AstCtx](Token &Tok) {
+    return IdentifierLoc::create(AstCtx, Tok.getLocation(), Tok.getIdentifierInfo());
+  };
+  auto *Info = static_cast<PragmaPrecisionInfo *>(Tok.getAnnotationValue());
+  Spec.PragmaNameLoc = TokenToIDLoc(Info->Pragma);
+  for (auto &[Vars, Types] : Info->TuneSpecs) {
+    PragmaPrecisionSpec::VecTy VarsIDLoc, TypesIDLoc;
+    llvm::transform(Vars, std::back_inserter(VarsIDLoc), TokenToIDLoc);
+    llvm::transform(Types, std::back_inserter(TypesIDLoc), TokenToIDLoc);
+    Spec.TuneSpecs.emplace_back(std::move(VarsIDLoc), std::move(TypesIDLoc));
+  }
+  ConsumeAnnotationToken();
 }
 
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
@@ -3709,26 +3727,123 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
+// See Token::isSimpleTypeSpecifier
+static bool isSupportedPrecisionType(tok::TokenKind Kind) {
+  switch (Kind) {
+  case tok::kw_short:
+  case tok::kw_long:
+  case tok::kw___int64:
+  case tok::kw___int128:
+  case tok::kw_signed:
+  case tok::kw_unsigned:
+  case tok::kw_char:
+  case tok::kw_int:
+  case tok::kw_half:
+  case tok::kw_float:
+  case tok::kw_double:
+  case tok::kw___bf16:
+  case tok::kw__Float16:
+  case tok::kw___float128:
+  case tok::kw___ibm128:
+  case tok::kw_wchar_t:
+  case tok::kw_bool:
+  case tok::kw__Bool:
+  case tok::kw__Accum:
+  case tok::kw__Fract:
+  case tok::kw__Sat:
+  case tok::kw_char16_t:
+  case tok::kw_char32_t:
+  case tok::kw_char8_t:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool ParseCommaSeperatedTokenList(Preprocessor &PP, Token &Tok,
+                                         SmallVectorImpl<Token> &Tokens,
+                                         bool IsTypeKeyword) {
+  auto IsExpectedToken = [&](tok::TokenKind Kind) -> bool {
+    return IsTypeKeyword? Kind == tok::identifier : isSupportedPrecisionType(Kind);
+  };
+  auto *ExpectedTokenKind = IsTypeKeyword ? "type keywords" : "identifier";
+  assert(Tok.is(tok::l_paren) || Tok.is(tok::l_square));
+  auto LeftKind = Tok.getKind();
+  auto RightKind = (LeftKind == tok::l_paren ? tok::r_paren : tok::r_square);
+  auto DiagID =
+      (LeftKind == tok::l_paren ? diag::err_pragma_precision_expect_rparen
+                                : diag::err_pragma_precision_expect_rsquare);
+  // Lex the first identifier
+  PP.Lex(Tok);
+  if (IsExpectedToken(Tok.getKind())) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind) << ExpectedTokenKind;
+    return true;
+  }
+  Tokens.push_back(Tok);
+  // Lex other identifiers, if exists
+  for (PP.Lex(Tok); Tok.is(tok::comma); PP.Lex(Tok)) {
+    PP.Lex(Tok);
+    if (IsExpectedToken(Tok.getKind())) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind) << ExpectedTokenKind;
+      return true;
+    }
+    Tokens.push_back(Tok);
+  }
+  if (Tok.getKind() != RightKind) {
+    PP.Diag(Tok.getLocation(), DiagID);
+    return true;
+  }
+  // Lex one more token
+  PP.Lex(Tok);
+  return false;
+}
+
+static bool ParsePrecisionInfo(Preprocessor &PP, Token &Tok,
+                               PragmaPrecisionInfo &Info) {
+  assert(Tok.is(tok::identifier) and
+         Tok.getIdentifierInfo()->getName() == "precision");
+  Info.Pragma = Tok;
+  PP.Lex(Tok);
+  while (Tok.isNot(tok::eod)) {
+    PragmaPrecisionInfo::VecTy Vars, Types;
+    if (Tok.is(tok::l_paren)) {
+      if (ParseCommaSeperatedTokenList(PP, Tok, Vars, false))
+        return true;
+    }
+    if (Tok.is(tok::l_square)) {
+      if (ParseCommaSeperatedTokenList(PP, Tok, Types, true))
+        return true;
+    }
+    // report if both () and [] are not available
+    if (Vars.empty() and Types.empty()) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tune_spec);
+      return true;
+    }
+    Info.TuneSpecs.emplace_back(std::move(Vars), std::move(Types));
+  }
+  assert(Tok.is(tok::eod));
+  return false;
+}
+
 void PragmaPrecisionHandler::HandlePragma(Preprocessor &PP,
                                           PragmaIntroducer Introducer,
                                           Token &Tok) {
-  assert(Tok.is(tok::identifier));
-  // Incoming token is "precision" from "#pragma precision".
-  // Token PragmaName = Tok;
+  // Incoming token is "precision" from "#pragma precision ..."
+  assert(Tok.is(tok::identifier) and
+         Tok.getIdentifierInfo()->getName() == "precision");
+  Token FirstTok = Tok;
+  auto *Info = new (PP.getPreprocessorAllocator()) PragmaPrecisionInfo;
+  if (ParsePrecisionInfo(PP, Tok, *Info))
+    return;
+  assert(Tok.is(tok::eod));
+  Token EODTok = Tok;
 
   Token PrecisionTok;
   PrecisionTok.startToken();
   PrecisionTok.setKind(tok::annot_pragma_precision);
-  PrecisionTok.setLocation(Tok.getLocation());
-  PrecisionTok.setAnnotationEndLoc(Tok.getLocation());
-  PrecisionTok.setAnnotationValue(static_cast<void *>(Tok.getIdentifierInfo()));
-
-  PP.Lex(Tok);
-  if (Tok.isNot(tok::eod)) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
-        << "precision";
-    return;
-  }
+  PrecisionTok.setLocation(FirstTok.getLocation());
+  PrecisionTok.setAnnotationEndLoc(EODTok.getLocation());
+  PrecisionTok.setAnnotationValue(static_cast<void *>(Info));
 
   auto TokenArray = std::make_unique<Token[]>(1);
   TokenArray[0] = PrecisionTok;

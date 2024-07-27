@@ -587,7 +587,21 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
 
 static Attr *handlePrecisionAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                  SourceRange Range) {
-  return PrecisionAttr::CreateImplicit(S.Context, nullptr, 0, Range);
+  SmallVector<IdentifierInfo *> Vars, Types;
+  auto NumArgs = A.getNumArgs();
+  SmallVector<IdentifierInfo *> *Vec = &Vars;
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    auto ID = A.getArg(I);
+    if (ID.isNull()) {
+      Vec = &Types;
+      continue;
+    }
+    Vec->push_back(ID.get<IdentifierLoc *>()->Ident);
+  }
+  assert(NumArgs == 0 or Vec == &Types);
+  // The simple "#pragma precision" case is also correctly handled
+  return PrecisionAttr::CreateImplicit(S.Context, Vars.data(), Vars.size(),
+                                       Types.data(), Types.size(), Range);
 }
 
 static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,

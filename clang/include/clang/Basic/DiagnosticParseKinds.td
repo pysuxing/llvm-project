@@ -1629,6 +1629,17 @@ def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' c
   "'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; "
   "%0 is ignored">, InGroup<OpenMPExtensions>;
 
+// Pragma precision support.
+def err_pragma_precision_expect_tokenkind : Error<
+  "expected %0">;
+def err_pragma_precision_expect_tune_spec : Error<
+  "expected tune specification; supported forms are '(...)[...]', '(...)', '[...]', "
+  "in which '()' enclose variable names and '[]' enclose types">;
+def err_pragma_precision_expect_rparen : Error<
+  "expected ')'">;
+def err_pragma_precision_expect_rsquare : Error<
+  "expected ']'">;
+
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
   "missing argument; expected %select{an integer value|"
