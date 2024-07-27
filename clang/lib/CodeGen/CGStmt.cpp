@@ -719,10 +719,11 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitStmt(S.getSubStmt());
 }
 
-struct PrecisionRegion {
-  CGBuilderTy *Builder = nullptr;
-  llvm::Value *Anchor = nullptr;
-  void init(CGBuilderTy &Builder, const PrecisionAttr *Attr) {
+struct PrecisionGenGuard {
+  CGBuilderTy &Builder;
+  SmallVector<llvm::Value *> Anchors;
+  // llvm::Value *Anchor = nullptr;
+  void push(const PrecisionAttr *Attr) {
     auto &Ctx = Builder.getContext();
     auto MDStrBuilder = [&Ctx](IdentifierInfo *ID) {
       return llvm::MDString::get(Ctx, ID->getName());
@@ -739,14 +740,16 @@ struct PrecisionRegion {
     auto *MDVars = llvm::MDNode::get(Ctx, Vars);
     auto *MDTypes = llvm::MDNode::get(Ctx, Types);
     auto *MDPrecision = llvm::MDNode::get(Ctx, {MDVars, MDTypes});
-    this->Anchor = Builder.CreateIntrinsic(
-        Builder.getPtrTy(), llvm::Intrinsic::precision_begin, llvm::MetadataAsValue::get(Ctx, MDPrecision));
-    this->Builder = &Builder;
+    auto *AnchorValue = Builder.CreateIntrinsic(
+        Builder.getPtrTy(), llvm::Intrinsic::precision_begin,
+        llvm::MetadataAsValue::get(Ctx, MDPrecision));
+    Anchors.push_back(AnchorValue);
   }
-  ~PrecisionRegion() {
-    if (Builder and Anchor)
-      Builder->CreateIntrinsic(Builder->getVoidTy(),
-                               llvm::Intrinsic::precision_end, Anchor);
+  explicit PrecisionGenGuard(CGBuilderTy &Builder) : Builder(Builder), Anchors() {}
+  ~PrecisionGenGuard() {
+    for (auto *AnchorValue : llvm::reverse(Anchors))
+      Builder.CreateIntrinsic(Builder.getVoidTy(),
+                              llvm::Intrinsic::precision_end, AnchorValue);
   }
 };
 
@@ -755,7 +758,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool noinline = false;
   bool alwaysinline = false;
   const CallExpr *musttail = nullptr;
-  PrecisionRegion guard;
+  PrecisionGenGuard Guard(Builder);
 
   for (const auto *A : S.getAttrs()) {
     switch (A->getKind()) {
@@ -784,7 +787,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
       }
     } break;
     case attr::Precision: {
-      guard.init(Builder, cast<PrecisionAttr>(A));
+      Guard.push(cast<PrecisionAttr>(A));
     } break;
     }
   }
