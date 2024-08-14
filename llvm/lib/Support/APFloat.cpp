@@ -53,52 +53,6 @@ static_assert(APFloatBase::integerPartWidth % 4 == 0, "Part width must be divisi
 
 namespace llvm {
 
-// How the nonfinite values Inf and NaN are represented.
-enum class fltNonfiniteBehavior {
-  // Represents standard IEEE 754 behavior. A value is nonfinite if the
-  // exponent field is all 1s. In such cases, a value is Inf if the
-  // significand bits are all zero, and NaN otherwise
-  IEEE754,
-
-  // This behavior is present in the Float8ExMyFN* types (Float8E4M3FN,
-  // Float8E5M2FNUZ, Float8E4M3FNUZ, and Float8E4M3B11FNUZ). There is no
-  // representation for Inf, and operations that would ordinarily produce Inf
-  // produce NaN instead.
-  // The details of the NaN representation(s) in this form are determined by the
-  // `fltNanEncoding` enum. We treat all NaNs as quiet, as the available
-  // encodings do not distinguish between signalling and quiet NaN.
-  NanOnly,
-
-  // This behavior is present in Float6E3M2FN, Float6E2M3FN, and
-  // Float4E2M1FN types, which do not support Inf or NaN values.
-  FiniteOnly,
-};
-
-// How NaN values are represented. This is curently only used in combination
-// with fltNonfiniteBehavior::NanOnly, and using a variant other than IEEE
-// while having IEEE non-finite behavior is liable to lead to unexpected
-// results.
-enum class fltNanEncoding {
-  // Represents the standard IEEE behavior where a value is NaN if its
-  // exponent is all 1s and the significand is non-zero.
-  IEEE,
-
-  // Represents the behavior in the Float8E4M3 floating point type where NaN is
-  // represented by having the exponent and mantissa set to all 1s.
-  // This behavior matches the FP8 E4M3 type described in
-  // https://arxiv.org/abs/2209.05433. We treat both signed and unsigned NaNs
-  // as non-signalling, although the paper does not state whether the NaN
-  // values are signalling or not.
-  AllOnes,
-
-  // Represents the behavior in Float8E{5,4}E{2,3}FNUZ floating point types
-  // where NaN is represented by a sign bit of 1 and all 0s in the exponent
-  // and mantissa (i.e. the negative zero encoding in a IEEE float). Since
-  // there is only one NaN value, it is treated as quiet NaN. This matches the
-  // behavior described in https://arxiv.org/abs/2206.02915 .
-  NegativeZero,
-};
-
 /* Represents floating point arithmetic semantics.  */
 struct fltSemantics {
   /* The largest E such that 2^E is representable; this matches the
@@ -126,6 +80,7 @@ struct fltSemantics {
     return maxExponent <= S.maxExponent && minExponent >= S.minExponent &&
            precision <= S.precision;
   }
+  bool operator==(const fltSemantics &Other) const = default;
 };
 
 static constexpr fltSemantics semIEEEhalf = {15, -14, 11, 16};
@@ -189,7 +144,6 @@ static constexpr fltSemantics semPPCDoubleDouble = {-1, 0, 0, 128};
    semantics.  */
 static constexpr fltSemantics semPPCDoubleDoubleLegacy = {1023, -1022 + 53,
                                                           53 + 53, 128};
-
 const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
   switch (S) {
   case S_IEEEhalf:
@@ -289,6 +243,34 @@ const fltSemantics &APFloatBase::x87DoubleExtended() {
   return semX87DoubleExtended;
 }
 const fltSemantics &APFloatBase::Bogus() { return semBogus; }
+const fltSemantics &
+APFloatBase::getFloatSemantics(unsigned Width, unsigned Precision,
+                               ExponentType MaxExp, ExponentType MinExp,
+                               fltNonfiniteBehavior NonfiniteBehavior,
+                               fltNanEncoding NanEncoding) {
+  static const fltSemantics *StaticSemantics[] = {
+      &semIEEEhalf,          &semBFloat,
+      &semIEEEsingle,        &semIEEEdouble,
+      &semIEEEquad,          &semFloat8E5M2,
+      &semFloat8E5M2FNUZ,    &semFloat8E4M3FN,
+      &semFloat8E4M3FNUZ,    &semFloat8E4M3B11FNUZ,
+      &semFloatTF32,         &semFloat6E3M2FN,
+      &semFloat6E2M3FN,      &semFloat4E2M1FN,
+      &semX87DoubleExtended, &semBogus,
+      &semPPCDoubleDouble,   &semPPCDoubleDoubleLegacy};
+  static SmallVector<fltSemantics> FloatSemantics;
+  fltSemantics Sem = {MaxExp,     MinExp, Precision, Width, NonfiniteBehavior,
+                      NanEncoding};
+  for (auto *S : StaticSemantics)
+    if (Sem == *S)
+      return *S;
+  for (auto &S : FloatSemantics) {
+    if (Sem == S)
+      return S;
+  }
+  FloatSemantics.push_back(Sem);
+  return FloatSemantics.back();
+}
 
 constexpr RoundingMode APFloatBase::rmNearestTiesToEven;
 constexpr RoundingMode APFloatBase::rmTowardPositive;
