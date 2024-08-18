@@ -2432,6 +2432,11 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::MacroQualified:
   case Type::BitInt:
   case Type::DependentBitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+  case Type::Dependent##name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case Type::CountAttributed:
     llvm_unreachable("type is illegal as a nested name specifier");
 
@@ -4452,6 +4457,10 @@ void CXXNameMangler::mangleType(const DependentBitIntType *T) {
   mangleExpression(T->getNumBitsExpr());
   Out << "_";
 }
+
+#define PRECISION_CXXNAMEMANGLER_MANGLETYPE
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_CXXNAMEMANGLER_MANGLETYPE
 
 void CXXNameMangler::mangleType(const ArrayParameterType *T) {
   mangleType(cast<ConstantArrayType>(T));

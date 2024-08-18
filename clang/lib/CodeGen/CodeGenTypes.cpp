@@ -714,6 +714,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     ResultType = llvm::Type::getIntNTy(getLLVMContext(), EIT->getNumBits());
     break;
   }
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+    llvm_unreachable("Precision types not supported in LLVM IR Codegen");
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   }
 
   assert(ResultType && "Didn't convert a type?");

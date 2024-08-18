@@ -2708,6 +2708,10 @@ class DependentBitIntTypeLoc final
     : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DependentBitIntTypeLoc,
                                        DependentBitIntType> {};
 
+#define PRECISION_ASTTYPELOC_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTTYPELOC_DECL
+
 class ObjCProtocolLoc {
   ObjCProtocolDecl *Protocol = nullptr;
   SourceLocation Loc = SourceLocation();

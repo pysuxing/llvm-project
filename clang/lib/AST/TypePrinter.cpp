@@ -246,6 +246,11 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Pipe:
     case Type::BitInt:
     case Type::DependentBitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+  case Type::Dependent##name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
     case Type::BTFTagAttributed:
       CanPrefixQualifiers = true;
       break;
@@ -1357,6 +1362,10 @@ void TypePrinter::printDependentBitIntBefore(const DependentBitIntType *T,
   OS << ")";
   spaceBeforePlaceHolder(OS);
 }
+
+#define PRECISION_AST_TYPEPRINTER
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_AST_TYPEPRINTER
 
 void TypePrinter::printDependentBitIntAfter(const DependentBitIntType *T,
                                             raw_ostream &OS) {}

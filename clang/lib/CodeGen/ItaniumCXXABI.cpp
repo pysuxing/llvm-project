@@ -3600,6 +3600,11 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     VTableName = "_ZTVN10__cxxabiv123__fundamental_type_infoE";
     break;
 
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+    llvm_unreachable("Precision types not supported in LLVM IR Codegen");
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
@@ -3867,6 +3872,11 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   case Type::BitInt:
     break;
 
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+    llvm_unreachable("Precision types not supported in LLVM IR Codegen");
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:

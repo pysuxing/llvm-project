@@ -3754,8 +3754,12 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
 
   case Type::Atomic:
     return CreateType(cast<AtomicType>(Ty), Unit);
-
-  case Type::BitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+    llvm_unreachable("Precision types not supported in LLVM IR Codegen");
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+  case Type::BitInt: 
     return CreateType(cast<BitIntType>(Ty));
   case Type::Pipe:
     return CreateType(cast<PipeType>(Ty), Unit);

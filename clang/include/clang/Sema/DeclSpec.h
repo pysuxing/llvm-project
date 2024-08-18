@@ -322,6 +322,9 @@ public:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) \
   static const TST TST_##ImgType##_t = clang::TST_##ImgType##_t;
 #include "clang/Basic/OpenCLImageTypes.def"
+#define PRECISION_TYPE(name, lcname, ucname, kw) static const TST TST_##lcname = clang::TST_##lcname;
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   static const TST TST_error = clang::TST_error;
 
   // type-qualifiers
@@ -410,6 +413,7 @@ private:
     Expr *ExprRep;
     TemplateIdAnnotation *TemplateIdRep;
   };
+  SmallVector<Expr *> PrecisionTypeArgs;
   Expr *PackIndexingExpr = nullptr;
 
   /// ExplicitSpecifier - Store information about explicit spicifer.
@@ -552,6 +556,9 @@ public:
   Expr *getRepAsExpr() const {
     assert(isExprRep((TST) TypeSpecType) && "DeclSpec does not store an expr");
     return ExprRep;
+  }
+  ArrayRef<Expr *> getPrecisionTypeArgs() const {
+    return PrecisionTypeArgs;
   }
 
   Expr *getPackIndexingExpr() const {
@@ -774,7 +781,10 @@ public:
                      const PrintingPolicy &Policy);
   bool SetTypeSpecSat(SourceLocation Loc, const char *&PrevSpec,
                       unsigned &DiagID);
-
+  bool SetPrecisionType(SourceLocation KWLoc, TST TypeSpec,
+                        ArrayRef<Expr *> Args, const char *&PrevSpec,
+                        unsigned &DiagID, const PrintingPolicy &Policy);
+  
   void SetPackIndexingExpr(SourceLocation EllipsisLoc, Expr *Pack);
 
   bool SetTypeSpecError();

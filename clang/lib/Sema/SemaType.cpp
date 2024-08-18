@@ -1059,6 +1059,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
+#define PRECISION_SEMA_CONVERTDECLSPECTOTYPE
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_SEMA_CONVERTDECLSPECTOTYPE
   case DeclSpec::TST_accum: {
     switch (DS.getTypeSpecWidth()) {
     case TypeSpecifierWidth::Short:
@@ -1992,6 +1995,10 @@ QualType Sema::BuildBitIntType(bool IsUnsigned, Expr *BitWidth,
 
   return Context.getBitIntType(IsUnsigned, NumBits);
 }
+
+#define PRECISION_SEMA_METHODS_IMPL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_SEMA_METHODS_IMPL
 
 /// Check whether the specified array bound can be evaluated using the relevant
 /// language rules. If so, returns the possibly-converted expression and sets

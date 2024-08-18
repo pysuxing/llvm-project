@@ -1812,6 +1812,10 @@ ExpectedType clang::ASTNodeImporter::VisitDependentBitIntType(
                                                         *ToNumBitsExprOrErr);
 }
 
+#define PRECISION_ASTNODEIMPORTER
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTNODEIMPORTER
+
 ExpectedType clang::ASTNodeImporter::VisitDependentSizedMatrixType(
     const clang::DependentSizedMatrixType *T) {
   Error Err = Error::success();

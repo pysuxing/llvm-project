@@ -4464,6 +4464,9 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::ObjCTypeParam:
     case Type::Pipe:
     case Type::BitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
       llvm_unreachable("type class is never variably-modified!");
     case Type::Elaborated:
       T = cast<ElaboratedType>(Ty)->getNamedType();

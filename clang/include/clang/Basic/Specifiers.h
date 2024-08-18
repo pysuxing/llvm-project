@@ -98,6 +98,9 @@ namespace clang {
 #define GENERIC_IMAGE_TYPE(ImgType, Id)                                      \
     TST_##ImgType##_t, // OpenCL image types
 #include "clang/Basic/OpenCLImageTypes.def"
+#define PRECISION_TYPE(name, lcname, ucname, kw) TST_##lcname,
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
     TST_error // erroneous type
   };
 

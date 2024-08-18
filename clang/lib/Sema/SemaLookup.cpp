@@ -3272,6 +3272,9 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::ConstantMatrix:
     case Type::Complex:
     case Type::BitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
       break;
 
     // Non-deduced auto types only get here for error cases.

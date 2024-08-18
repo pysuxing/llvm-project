@@ -1626,6 +1626,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw__Sat:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define PRECISION_TYPE(name, lcname, ucname, keyword) case tok::kw_##keyword:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   {
     if (!getLangOpts().CPlusPlus) {
       Diag(Tok, diag::err_expected_expression);

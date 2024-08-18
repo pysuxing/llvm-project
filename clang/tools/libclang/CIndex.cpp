@@ -1939,6 +1939,11 @@ DEFAULT_TYPELOC_IMPL(SubstTemplateTypeParmPack, Type)
 DEFAULT_TYPELOC_IMPL(Auto, Type)
 DEFAULT_TYPELOC_IMPL(BitInt, Type)
 DEFAULT_TYPELOC_IMPL(DependentBitInt, Type)
+#define PRECISION_TYPE(name, lcname, ucname, kw)                               \
+DEFAULT_TYPELOC_IMPL(name, Type)                                             \
+DEFAULT_TYPELOC_IMPL(Dependent##name, Type)
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 
 bool CursorVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // Visit the nested-name-specifier, if present.

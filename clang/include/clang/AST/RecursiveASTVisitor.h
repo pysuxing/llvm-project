@@ -1193,6 +1193,10 @@ DEF_TRAVERSE_TYPE(BitIntType, {})
 DEF_TRAVERSE_TYPE(DependentBitIntType,
                   { TRY_TO(TraverseStmt(T->getNumBitsExpr())); })
 
+#define PRECISION_ASTTYPEVISITOR_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTTYPEVISITOR_DECL
+
 #undef DEF_TRAVERSE_TYPE
 
 // ----------------- TypeLoc traversal -----------------
@@ -1502,6 +1506,10 @@ DEF_TRAVERSE_TYPELOC(BitIntType, {})
 DEF_TRAVERSE_TYPELOC(DependentBitIntType, {
   TRY_TO(TraverseStmt(TL.getTypePtr()->getNumBitsExpr()));
 })
+
+#define PRECISION_ASTTYPELOCVISITOR_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTTYPELOCVISITOR_DECL
 
 #undef DEF_TRAVERSE_TYPELOC
 

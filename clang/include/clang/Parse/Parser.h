@@ -3143,6 +3143,7 @@ private:
   void ParseAlignmentSpecifier(ParsedAttributes &Attrs,
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();
+  bool ParsePrecisionTypeArguments(int NumArgs, SmallVectorImpl<Expr *> &Args);
 
   VirtSpecifiers::Specifier isCXX11VirtSpecifier(const Token &Tok) const;
   VirtSpecifiers::Specifier isCXX11VirtSpecifier() const {

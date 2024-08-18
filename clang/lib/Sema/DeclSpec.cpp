@@ -377,6 +377,9 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_typename_pack_indexing:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define PRECISION_TYPE(name, lcname, ucname, kw) case TST_##lcname:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
       return false;
 
     case TST_decltype_auto:
@@ -608,6 +611,9 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_##ImgType##_t: \
     return #ImgType "_t";
 #include "clang/Basic/OpenCLImageTypes.def"
+#define PRECISION_TYPE(name, lcname, ucname, kw) case DeclSpec::TST_##lcname: return #kw;
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
@@ -980,6 +986,27 @@ bool DeclSpec::SetBitIntType(SourceLocation KWLoc, Expr *BitsExpr,
 
   TypeSpecType = TST_bitint;
   ExprRep = BitsExpr;
+  TSTLoc = KWLoc;
+  TSTNameLoc = KWLoc;
+  TypeSpecOwned = false;
+  return false;
+}
+
+bool DeclSpec::SetPrecisionType(SourceLocation KWLoc, TST TypeSpec,
+                                ArrayRef<Expr *> Args, const char *&PrevSpec,
+                                unsigned &DiagID,
+                                const PrintingPolicy &Policy) {
+  if (TypeSpecType == TST_error)
+    return false;
+
+  if (TypeSpecType != TST_unspecified) {
+    PrevSpec = DeclSpec::getSpecifierName((TST) TypeSpecType, Policy);
+    DiagID = diag::err_invalid_decl_spec_combination;
+    return true;
+  }
+
+  TypeSpecType = TypeSpec;
+  PrecisionTypeArgs.assign(Args.begin(), Args.end());
   TSTLoc = KWLoc;
   TSTNameLoc = KWLoc;
   TypeSpecOwned = false;

@@ -537,6 +537,13 @@ public:
     return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
                                 getBitIntMaxAlign());
   }
+  unsigned getPrecisionTypeWidth(unsigned NumBits) const {
+    return llvm::alignTo(NumBits, getPrecisionTypeAlign(NumBits));
+  }
+  unsigned getPrecisionTypeAlign(unsigned NumBits) const {
+    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
+                                LongLongAlign);
+  }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.

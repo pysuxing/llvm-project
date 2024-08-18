@@ -156,6 +156,12 @@ void EmitClangDataCollectors(llvm::RecordKeeper &Records,
 void EmitTestPragmaAttributeSupportedAttributes(llvm::RecordKeeper &Records,
                                                 llvm::raw_ostream &OS);
 
+void EmitPrecisionTypeNodes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitPrecisionTypeProperties(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitPrecisionTypeList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitPrecisionParser(llvm::RecordKeeper &Records,
+                              llvm::raw_ostream &OS);
+void EmitPrecisionAST(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 } // end namespace clang
 
 #endif

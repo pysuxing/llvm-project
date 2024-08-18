@@ -1798,6 +1798,9 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
     case Type::BitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
       return (TDF & TDF_SkipNonDependent) ||
                      ((TDF & TDF_IgnoreQualifiers)
                           ? S.Context.hasSameUnqualifiedType(P, A)
@@ -2362,6 +2365,12 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
 
       return TemplateDeductionResult::NonDeducedMismatch;
     }
+
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::Dependent##name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+      // PFIXME
+      llvm_unreachable("Not implement yet for dependent precision types!");
     case Type::DependentBitInt: {
       const auto *IP = P->castAs<DependentBitIntType>();
 
@@ -6850,6 +6859,9 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                OnlyDeduced, Depth, Used);
     break;
 
+#define PRECISION_SEMA_MARKUSEDTEMPLATEPARAMS
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_SEMA_MARKUSEDTEMPLATEPARAMS
   // None of these types have any template parameters in them.
   case Type::Builtin:
   case Type::VariableArray:
@@ -6862,6 +6874,9 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::UnresolvedUsing:
   case Type::Pipe:
   case Type::BitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

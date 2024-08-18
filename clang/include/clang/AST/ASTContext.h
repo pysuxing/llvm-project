@@ -263,6 +263,13 @@ class ASTContext : public RefCountedBase<ASTContext> {
                                      ASTContext&>
     SubstTemplateTemplateParmPacks;
 
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  mutable llvm::FoldingSet<name##Type> name##Types;                            \
+  mutable llvm::ContextualFoldingSet<Dependent##name##Type, ASTContext &>      \
+      Dependent##name##Types;
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
 
@@ -1412,6 +1419,10 @@ public:
   /// Return a dependent bit-precise integer type with the specified signedness
   /// and bit count.
   QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
+
+#define PRECISION_ASTCONTEXT_GETTYPE_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTCONTEXT_GETTYPE_DECL
 
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.

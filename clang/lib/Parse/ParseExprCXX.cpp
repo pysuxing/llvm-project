@@ -2370,6 +2370,9 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
     DS.Finish(Actions, Policy);
     return;
   }
+#define PRECISION_CXXSIMPLETYPESPECIFIERS
+#include "clang/Precision/PrecisionTypeParsers.cpp.inc"
+#undef PRECISION_CXXSIMPLETYPESPECIFIERS
 
   // builtin types
   case tok::kw_short:

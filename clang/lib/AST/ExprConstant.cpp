@@ -11912,6 +11912,12 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::BitInt:
     return GCCTypeClass::BitInt;
 
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+    // PFIXME GCCTypeClass::None?
+    return GCCTypeClass::RealFloat;
+    
   case Type::LValueReference:
   case Type::RValueReference:
     llvm_unreachable("invalid type for expression");

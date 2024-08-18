@@ -998,3 +998,5 @@ let Class = DependentBitIntType in {
     return ctx.getDependentBitIntType(isUnsigned, numBitsExpr);
   }]>;
 }
+
+include "clang/Precision/PrecisionTypeProperties.inc"

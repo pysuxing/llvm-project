@@ -3559,6 +3559,9 @@ void MicrosoftCXXNameMangler::mangleType(const DependentBitIntType *T,
   Diags.Report(Range.getBegin(), DiagID) << Range;
 }
 
+#define PRECISION_ASTMSCXXNAMEMANGLER_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTMSCXXNAMEMANGLER_DECL
 // <this-adjustment> ::= <no-adjustment> | <static-adjustment> |
 //                       <virtual-adjustment>
 // <no-adjustment>      ::= A # private near

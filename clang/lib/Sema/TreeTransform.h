@@ -1287,6 +1287,10 @@ public:
   QualType RebuildBitIntType(bool IsUnsigned, unsigned NumBits,
                              SourceLocation Loc);
 
+#define PRECISION_SEMA_REBUILD_TYPES_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_SEMA_REBUILD_TYPES_DECL
+  
   /// Build a dependent bit-precise int given its value type.
   QualType RebuildDependentBitIntType(bool IsUnsigned, Expr *NumBitsExpr,
                                       SourceLocation Loc);
@@ -6963,6 +6967,10 @@ QualType TreeTransform<Derived>::TransformDependentBitIntType(
   }
   return Result;
 }
+
+#define PRECISION_SEMA_TRANSFORM_TYPES
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_SEMA_TRANSFORM_TYPES
 
   /// Simple iterator that traverses the template arguments in a
   /// container that provides a \c getArgLoc() member function.
@@ -16214,6 +16222,10 @@ QualType TreeTransform<Derived>::RebuildDependentBitIntType(
     bool IsUnsigned, Expr *NumBitsExpr, SourceLocation Loc) {
   return SemaRef.BuildBitIntType(IsUnsigned, NumBitsExpr, Loc);
 }
+
+#define PRECISION_SEMA_REBUILD_TYPES_IMPL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_SEMA_REBUILD_TYPES_IMPL
 
 template<typename Derived>
 TemplateName

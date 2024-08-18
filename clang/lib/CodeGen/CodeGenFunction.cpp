@@ -267,6 +267,11 @@ TypeEvaluationKind CodeGenFunction::getEvaluationKind(QualType type) {
     case Type::BitInt:
       return TEK_Scalar;
 
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+    llvm_unreachable("Precision types not supported in LLVM IR Codegen");
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
     // Complexes.
     case Type::Complex:
       return TEK_Complex;
@@ -2357,6 +2362,11 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::BitInt:
       llvm_unreachable("type class is never variably-modified!");
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+    llvm_unreachable("Precision types not supported in LLVM IR Codegen");
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 
     case Type::Elaborated:
       type = cast<ElaboratedType>(ty)->getNamedType();

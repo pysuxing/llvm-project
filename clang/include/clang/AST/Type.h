@@ -7311,6 +7311,10 @@ public:
   }
 };
 
+#define PRECISION_ASTTYPE_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTTYPE_DECL
+
 /// A qualifier set is used to build a set of qualifiers.
 class QualifierCollector : public Qualifiers {
 public:

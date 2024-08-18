@@ -6696,6 +6696,14 @@ static std::optional<Type::TypeClass> getTypeClassForCode(TypeCode code) {
 #define TYPE_BIT_CODE(CLASS_ID, CODE_ID, CODE_VALUE) \
   case TYPE_##CODE_ID: return Type::CLASS_ID;
 #include "clang/Serialization/TypeBitCodes.def"
+
+#define PRECISION_TYPE(name, lcname, ucname, kw)                               \
+  case TYPE_##ucname##_ID:                                                     \
+    return Type::name;                                                         \
+  case TYPE_DEPENDENT_##ucname##_ID:                                           \
+    return Type::Dependent##name;
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   default:
     return std::nullopt;
   }
@@ -7133,6 +7141,17 @@ void TypeLocReader::VisitDependentBitIntTypeLoc(
     clang::DependentBitIntTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }
+
+#define PRECISION_TYPE(name, lcname, ucname, kw)                               \
+  void TypeLocReader::Visit##name##TypeLoc(clang::name##TypeLoc TL) {          \
+    TL.setNameLoc(readSourceLocation());                                       \
+  }                                                                            \
+  void TypeLocReader::VisitDependent##name##TypeLoc(                           \
+      clang::Dependent##name##TypeLoc TL) {                                    \
+    TL.setNameLoc(readSourceLocation());                                       \
+  }
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 
 void ASTRecordReader::readTypeLoc(TypeLoc TL, LocSeq *ParentSeq) {
   LocSeq::State Seq(ParentSeq);

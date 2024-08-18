@@ -7180,6 +7180,17 @@ bool UnnamedLocalNoLinkageFinder::VisitDependentBitIntType(
   return false;
 }
 
+#define PRECISION_TYPE(name, lcname, ucname, kw)                               \
+  bool UnnamedLocalNoLinkageFinder::Visit##name##Type(const name##Type *T) {   \
+    return false;                                                              \
+  }                                                                            \
+  bool UnnamedLocalNoLinkageFinder::VisitDependent##name##Type(                \
+      const Dependent##name##Type *T) {                                        \
+    return false;                                                              \
+  }
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+
 bool UnnamedLocalNoLinkageFinder::VisitTagDecl(const TagDecl *Tag) {
   if (Tag->getDeclContext()->isFunctionOrMethod()) {
     S.Diag(SR.getBegin(),

@@ -401,6 +401,10 @@ void DependentBitIntType::Profile(llvm::FoldingSetNodeID &ID,
   NumBitsExpr->Profile(ID, Context, true);
 }
 
+#define PRECISION_ASTTYPE_IMPL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTTYPE_IMPL
+
 bool BoundsAttributedType::referencesFieldDecls() const {
   return llvm::any_of(dependent_decls(),
                       [](const TypeCoupledDeclRefInfo &Info) {
@@ -2631,6 +2635,9 @@ bool QualType::isCXX98PODType(const ASTContext &Context) const {
   case Type::Vector:
   case Type::ExtVector:
   case Type::BitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
     return true;
 
   case Type::Enum:
@@ -4501,6 +4508,11 @@ static CachedProperties computeCachedProperties(const Type *T) {
     //     - it is a fundamental type (3.9.1); or
     return CachedProperties(Linkage::External, false);
 
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+    return CachedProperties(Linkage::External, false);
+    
   case Type::Record:
   case Type::Enum: {
     const TagDecl *Tag = cast<TagType>(T)->getDecl();
@@ -4596,6 +4608,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return LinkageInfo::external();
 
   case Type::BitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case Type::Builtin:
     return LinkageInfo::external();
 
@@ -4832,6 +4847,11 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::Pipe:
   case Type::BitInt:
   case Type::DependentBitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+  case Type::Dependent##name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case Type::ArrayParameter:
     return false;
   }

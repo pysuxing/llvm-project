@@ -3398,717 +3398,756 @@ ExprResult Parser::ParseExtIntegerArgument() {
   return ER;
 }
 
-/// Determine whether we're looking at something that might be a declarator
-/// in a simple-declaration. If it can't possibly be a declarator, maybe
-/// diagnose a missing semicolon after a prior tag definition in the decl
-/// specifier.
-///
-/// \return \c true if an error occurred and this can't be any kind of
-/// declaration.
-bool
-Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
-                                              DeclSpecContext DSContext,
-                                              LateParsedAttrList *LateAttrs) {
-  assert(DS.hasTagDefinition() && "shouldn't call this");
-
-  bool EnteringContext = (DSContext == DeclSpecContext::DSC_class ||
-                          DSContext == DeclSpecContext::DSC_top_level);
-
-  if (getLangOpts().CPlusPlus &&
-      Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw_decltype,
-                  tok::annot_template_id) &&
-      TryAnnotateCXXScopeToken(EnteringContext)) {
-    SkipMalformedDecl();
+bool Parser::ParsePrecisionTypeArguments(int NumArgs,
+                                         SmallVectorImpl<Expr *> &Args) {
+  if (NumArgs == 0)
     return true;
-  }
-
-  bool HasScope = Tok.is(tok::annot_cxxscope);
-  // Make a copy in case GetLookAheadToken invalidates the result of NextToken.
-  Token AfterScope = HasScope ? NextToken() : Tok;
-
-  // Determine whether the following tokens could possibly be a
-  // declarator.
-  bool MightBeDeclarator = true;
-  if (Tok.isOneOf(tok::kw_typename, tok::annot_typename)) {
-    // A declarator-id can't start with 'typename'.
-    MightBeDeclarator = false;
-  } else if (AfterScope.is(tok::annot_template_id)) {
-    // If we have a type expressed as a template-id, this cannot be a
-    // declarator-id (such a type cannot be redeclared in a simple-declaration).
-    TemplateIdAnnotation *Annot =
-        static_cast<TemplateIdAnnotation *>(AfterScope.getAnnotationValue());
-    if (Annot->Kind == TNK_Type_template)
-      MightBeDeclarator = false;
-  } else if (AfterScope.is(tok::identifier)) {
-    const Token &Next = HasScope ? GetLookAheadToken(2) : NextToken();
-
-    // These tokens cannot come after the declarator-id in a
-    // simple-declaration, and are likely to come after a type-specifier.
-    if (Next.isOneOf(tok::star, tok::amp, tok::ampamp, tok::identifier,
-                     tok::annot_cxxscope, tok::coloncolon)) {
-      // Missing a semicolon.
-      MightBeDeclarator = false;
-    } else if (HasScope) {
-      // If the declarator-id has a scope specifier, it must redeclare a
-      // previously-declared entity. If that's a type (and this is not a
-      // typedef), that's an error.
-      CXXScopeSpec SS;
-      Actions.RestoreNestedNameSpecifierAnnotation(
-          Tok.getAnnotationValue(), Tok.getAnnotationRange(), SS);
-      IdentifierInfo *Name = AfterScope.getIdentifierInfo();
-      Sema::NameClassification Classification = Actions.ClassifyName(
-          getCurScope(), SS, Name, AfterScope.getLocation(), Next,
-          /*CCC=*/nullptr);
-      switch (Classification.getKind()) {
-      case Sema::NC_Error:
-        SkipMalformedDecl();
-        return true;
-
-      case Sema::NC_Keyword:
-        llvm_unreachable("typo correction is not possible here");
-
-      case Sema::NC_Type:
-      case Sema::NC_TypeTemplate:
-      case Sema::NC_UndeclaredNonType:
-      case Sema::NC_UndeclaredTemplate:
-        // Not a previously-declared non-type entity.
-        MightBeDeclarator = false;
-        break;
-
-      case Sema::NC_Unknown:
-      case Sema::NC_NonType:
-      case Sema::NC_DependentNonType:
-      case Sema::NC_OverloadSet:
-      case Sema::NC_VarTemplate:
-      case Sema::NC_FunctionTemplate:
-      case Sema::NC_Concept:
-        // Might be a redeclaration of a prior entity.
-        break;
-      }
-    }
-  }
-
-  if (MightBeDeclarator)
+  ConsumeToken();
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
     return false;
-
-  const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
-  Diag(PP.getLocForEndOfToken(DS.getRepAsDecl()->getEndLoc()),
-       diag::err_expected_after)
-      << DeclSpec::getSpecifierName(DS.getTypeSpecType(), PPol) << tok::semi;
-
-  // Try to recover from the typo, by dropping the tag definition and parsing
-  // the problematic tokens as a type.
-  //
-  // FIXME: Split the DeclSpec into pieces for the standalone
-  // declaration and pieces for the following declaration, instead
-  // of assuming that all the other pieces attach to new declaration,
-  // and call ParsedFreeStandingDeclSpec as appropriate.
-  DS.ClearTypeSpecType();
-  ParsedTemplateInfo NotATemplate;
-  ParseDeclarationSpecifiers(DS, NotATemplate, AS, DSContext, LateAttrs);
-  return false;
+  ExprResult ER = ParseConstantExpression();
+  if (ER.isInvalid()) {
+    T.skipToEnd();
+    return false;
+  }
+  Args.push_back(ER.get());
+  for (int i = 1; i < NumArgs; ++i) {
+    if (not TryConsumeToken(tok::comma) or
+        (ER = ParseConstantExpression()).isInvalid()) {
+      T.skipToEnd();
+      return false;
+    }
+    Args.push_back(ER.get());
+  }
+  if (T.consumeClose())
+    return false;
+  return true;
 }
 
-/// ParseDeclarationSpecifiers
-///       declaration-specifiers: [C99 6.7]
-///         storage-class-specifier declaration-specifiers[opt]
-///         type-specifier declaration-specifiers[opt]
-/// [C99]   function-specifier declaration-specifiers[opt]
-/// [C11]   alignment-specifier declaration-specifiers[opt]
-/// [GNU]   attributes declaration-specifiers[opt]
-/// [Clang] '__module_private__' declaration-specifiers[opt]
-/// [ObjC1] '__kindof' declaration-specifiers[opt]
-///
-///       storage-class-specifier: [C99 6.7.1]
-///         'typedef'
-///         'extern'
-///         'static'
-///         'auto'
-///         'register'
-/// [C++]   'mutable'
-/// [C++11] 'thread_local'
-/// [C11]   '_Thread_local'
-/// [GNU]   '__thread'
-///       function-specifier: [C99 6.7.4]
-/// [C99]   'inline'
-/// [C++]   'virtual'
-/// [C++]   'explicit'
-/// [OpenCL] '__kernel'
-///       'friend': [C++ dcl.friend]
-///       'constexpr': [C++0x dcl.constexpr]
-void Parser::ParseDeclarationSpecifiers(
-    DeclSpec &DS, ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
-    DeclSpecContext DSContext, LateParsedAttrList *LateAttrs,
-    ImplicitTypenameContext AllowImplicitTypename) {
-  if (DS.getSourceRange().isInvalid()) {
-    // Start the range at the current token but make the end of the range
-    // invalid.  This will make the entire range invalid unless we successfully
-    // consume a token.
-    DS.SetRangeStart(Tok.getLocation());
-    DS.SetRangeEnd(SourceLocation());
-  }
+  /// Determine whether we're looking at something that might be a declarator
+  /// in a simple-declaration. If it can't possibly be a declarator, maybe
+  /// diagnose a missing semicolon after a prior tag definition in the decl
+  /// specifier.
+  ///
+  /// \return \c true if an error occurred and this can't be any kind of
+  /// declaration.
+  bool Parser::DiagnoseMissingSemiAfterTagDefinition(
+      DeclSpec & DS, AccessSpecifier AS, DeclSpecContext DSContext,
+      LateParsedAttrList * LateAttrs) {
+    assert(DS.hasTagDefinition() && "shouldn't call this");
 
-  // If we are in a operator context, convert it back into a type specifier
-  // context for better error handling later on.
-  if (DSContext == DeclSpecContext::DSC_conv_operator) {
-    // No implicit typename here.
-    AllowImplicitTypename = ImplicitTypenameContext::No;
-    DSContext = DeclSpecContext::DSC_type_specifier;
-  }
+    bool EnteringContext = (DSContext == DeclSpecContext::DSC_class ||
+                            DSContext == DeclSpecContext::DSC_top_level);
 
-  bool EnteringContext = (DSContext == DeclSpecContext::DSC_class ||
-                          DSContext == DeclSpecContext::DSC_top_level);
-  bool AttrsLastTime = false;
-  ParsedAttributes attrs(AttrFactory);
-  // We use Sema's policy to get bool macros right.
-  PrintingPolicy Policy = Actions.getPrintingPolicy();
-  while (true) {
-    bool isInvalid = false;
-    bool isStorageClass = false;
-    const char *PrevSpec = nullptr;
-    unsigned DiagID = 0;
-
-    // This value needs to be set to the location of the last token if the last
-    // token of the specifier is already consumed.
-    SourceLocation ConsumedEnd;
-
-    // HACK: MSVC doesn't consider _Atomic to be a keyword and its STL
-    // implementation for VS2013 uses _Atomic as an identifier for one of the
-    // classes in <atomic>.
-    //
-    // A typedef declaration containing _Atomic<...> is among the places where
-    // the class is used.  If we are currently parsing such a declaration, treat
-    // the token as an identifier.
-    if (getLangOpts().MSVCCompat && Tok.is(tok::kw__Atomic) &&
-        DS.getStorageClassSpec() == clang::DeclSpec::SCS_typedef &&
-        !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less))
-      Tok.setKind(tok::identifier);
-
-    SourceLocation Loc = Tok.getLocation();
-
-    // Helper for image types in OpenCL.
-    auto handleOpenCLImageKW = [&] (StringRef Ext, TypeSpecifierType ImageTypeSpec) {
-      // Check if the image type is supported and otherwise turn the keyword into an identifier
-      // because image types from extensions are not reserved identifiers.
-      if (!StringRef(Ext).empty() && !getActions().getOpenCLOptions().isSupported(Ext, getLangOpts())) {
-        Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
-        Tok.setKind(tok::identifier);
-        return false;
-      }
-      isInvalid = DS.SetTypeSpecType(ImageTypeSpec, Loc, PrevSpec, DiagID, Policy);
+    if (getLangOpts().CPlusPlus &&
+        Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw_decltype,
+                    tok::annot_template_id) &&
+        TryAnnotateCXXScopeToken(EnteringContext)) {
+      SkipMalformedDecl();
       return true;
-    };
+    }
 
-    // Turn off usual access checking for template specializations and
-    // instantiations.
-    bool IsTemplateSpecOrInst =
-        (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
-         TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+    bool HasScope = Tok.is(tok::annot_cxxscope);
+    // Make a copy in case GetLookAheadToken invalidates the result of
+    // NextToken.
+    Token AfterScope = HasScope ? NextToken() : Tok;
 
-    switch (Tok.getKind()) {
-    default:
-      if (Tok.isRegularKeywordAttribute())
-        goto Attribute;
+    // Determine whether the following tokens could possibly be a
+    // declarator.
+    bool MightBeDeclarator = true;
+    if (Tok.isOneOf(tok::kw_typename, tok::annot_typename)) {
+      // A declarator-id can't start with 'typename'.
+      MightBeDeclarator = false;
+    } else if (AfterScope.is(tok::annot_template_id)) {
+      // If we have a type expressed as a template-id, this cannot be a
+      // declarator-id (such a type cannot be redeclared in a
+      // simple-declaration).
+      TemplateIdAnnotation *Annot =
+          static_cast<TemplateIdAnnotation *>(AfterScope.getAnnotationValue());
+      if (Annot->Kind == TNK_Type_template)
+        MightBeDeclarator = false;
+    } else if (AfterScope.is(tok::identifier)) {
+      const Token &Next = HasScope ? GetLookAheadToken(2) : NextToken();
 
-    DoneWithDeclSpec:
-      if (!AttrsLastTime)
-        ProhibitAttributes(attrs);
-      else {
-        // Reject C++11 / C23 attributes that aren't type attributes.
-        for (const ParsedAttr &PA : attrs) {
-          if (!PA.isCXX11Attribute() && !PA.isC23Attribute() &&
-              !PA.isRegularKeywordAttribute())
-            continue;
-          if (PA.getKind() == ParsedAttr::UnknownAttribute)
-            // We will warn about the unknown attribute elsewhere (in
-            // SemaDeclAttr.cpp)
-            continue;
-          // GCC ignores this attribute when placed on the DeclSpec in [[]]
-          // syntax, so we do the same.
-          if (PA.getKind() == ParsedAttr::AT_VectorSize) {
-            Diag(PA.getLoc(), diag::warn_attribute_ignored) << PA;
+      // These tokens cannot come after the declarator-id in a
+      // simple-declaration, and are likely to come after a type-specifier.
+      if (Next.isOneOf(tok::star, tok::amp, tok::ampamp, tok::identifier,
+                       tok::annot_cxxscope, tok::coloncolon)) {
+        // Missing a semicolon.
+        MightBeDeclarator = false;
+      } else if (HasScope) {
+        // If the declarator-id has a scope specifier, it must redeclare a
+        // previously-declared entity. If that's a type (and this is not a
+        // typedef), that's an error.
+        CXXScopeSpec SS;
+        Actions.RestoreNestedNameSpecifierAnnotation(
+            Tok.getAnnotationValue(), Tok.getAnnotationRange(), SS);
+        IdentifierInfo *Name = AfterScope.getIdentifierInfo();
+        Sema::NameClassification Classification = Actions.ClassifyName(
+            getCurScope(), SS, Name, AfterScope.getLocation(), Next,
+            /*CCC=*/nullptr);
+        switch (Classification.getKind()) {
+        case Sema::NC_Error:
+          SkipMalformedDecl();
+          return true;
+
+        case Sema::NC_Keyword:
+          llvm_unreachable("typo correction is not possible here");
+
+        case Sema::NC_Type:
+        case Sema::NC_TypeTemplate:
+        case Sema::NC_UndeclaredNonType:
+        case Sema::NC_UndeclaredTemplate:
+          // Not a previously-declared non-type entity.
+          MightBeDeclarator = false;
+          break;
+
+        case Sema::NC_Unknown:
+        case Sema::NC_NonType:
+        case Sema::NC_DependentNonType:
+        case Sema::NC_OverloadSet:
+        case Sema::NC_VarTemplate:
+        case Sema::NC_FunctionTemplate:
+        case Sema::NC_Concept:
+          // Might be a redeclaration of a prior entity.
+          break;
+        }
+      }
+    }
+
+    if (MightBeDeclarator)
+      return false;
+
+    const PrintingPolicy &PPol = Actions.getASTContext().getPrintingPolicy();
+    Diag(PP.getLocForEndOfToken(DS.getRepAsDecl()->getEndLoc()),
+         diag::err_expected_after)
+        << DeclSpec::getSpecifierName(DS.getTypeSpecType(), PPol) << tok::semi;
+
+    // Try to recover from the typo, by dropping the tag definition and parsing
+    // the problematic tokens as a type.
+    //
+    // FIXME: Split the DeclSpec into pieces for the standalone
+    // declaration and pieces for the following declaration, instead
+    // of assuming that all the other pieces attach to new declaration,
+    // and call ParsedFreeStandingDeclSpec as appropriate.
+    DS.ClearTypeSpecType();
+    ParsedTemplateInfo NotATemplate;
+    ParseDeclarationSpecifiers(DS, NotATemplate, AS, DSContext, LateAttrs);
+    return false;
+  }
+
+  /// ParseDeclarationSpecifiers
+  ///       declaration-specifiers: [C99 6.7]
+  ///         storage-class-specifier declaration-specifiers[opt]
+  ///         type-specifier declaration-specifiers[opt]
+  /// [C99]   function-specifier declaration-specifiers[opt]
+  /// [C11]   alignment-specifier declaration-specifiers[opt]
+  /// [GNU]   attributes declaration-specifiers[opt]
+  /// [Clang] '__module_private__' declaration-specifiers[opt]
+  /// [ObjC1] '__kindof' declaration-specifiers[opt]
+  ///
+  ///       storage-class-specifier: [C99 6.7.1]
+  ///         'typedef'
+  ///         'extern'
+  ///         'static'
+  ///         'auto'
+  ///         'register'
+  /// [C++]   'mutable'
+  /// [C++11] 'thread_local'
+  /// [C11]   '_Thread_local'
+  /// [GNU]   '__thread'
+  ///       function-specifier: [C99 6.7.4]
+  /// [C99]   'inline'
+  /// [C++]   'virtual'
+  /// [C++]   'explicit'
+  /// [OpenCL] '__kernel'
+  ///       'friend': [C++ dcl.friend]
+  ///       'constexpr': [C++0x dcl.constexpr]
+  void Parser::ParseDeclarationSpecifiers(
+      DeclSpec & DS, ParsedTemplateInfo & TemplateInfo, AccessSpecifier AS,
+      DeclSpecContext DSContext, LateParsedAttrList * LateAttrs,
+      ImplicitTypenameContext AllowImplicitTypename) {
+    if (DS.getSourceRange().isInvalid()) {
+      // Start the range at the current token but make the end of the range
+      // invalid.  This will make the entire range invalid unless we
+      // successfully consume a token.
+      DS.SetRangeStart(Tok.getLocation());
+      DS.SetRangeEnd(SourceLocation());
+    }
+
+    // If we are in a operator context, convert it back into a type specifier
+    // context for better error handling later on.
+    if (DSContext == DeclSpecContext::DSC_conv_operator) {
+      // No implicit typename here.
+      AllowImplicitTypename = ImplicitTypenameContext::No;
+      DSContext = DeclSpecContext::DSC_type_specifier;
+    }
+
+    bool EnteringContext = (DSContext == DeclSpecContext::DSC_class ||
+                            DSContext == DeclSpecContext::DSC_top_level);
+    bool AttrsLastTime = false;
+    ParsedAttributes attrs(AttrFactory);
+    // We use Sema's policy to get bool macros right.
+    PrintingPolicy Policy = Actions.getPrintingPolicy();
+    while (true) {
+      bool isInvalid = false;
+      bool isStorageClass = false;
+      const char *PrevSpec = nullptr;
+      unsigned DiagID = 0;
+
+      // This value needs to be set to the location of the last token if the
+      // last token of the specifier is already consumed.
+      SourceLocation ConsumedEnd;
+
+      // HACK: MSVC doesn't consider _Atomic to be a keyword and its STL
+      // implementation for VS2013 uses _Atomic as an identifier for one of the
+      // classes in <atomic>.
+      //
+      // A typedef declaration containing _Atomic<...> is among the places where
+      // the class is used.  If we are currently parsing such a declaration,
+      // treat the token as an identifier.
+      if (getLangOpts().MSVCCompat && Tok.is(tok::kw__Atomic) &&
+          DS.getStorageClassSpec() == clang::DeclSpec::SCS_typedef &&
+          !DS.hasTypeSpecifier() && GetLookAheadToken(1).is(tok::less))
+        Tok.setKind(tok::identifier);
+
+      SourceLocation Loc = Tok.getLocation();
+
+      // Helper for image types in OpenCL.
+      auto handleOpenCLImageKW = [&](StringRef Ext,
+                                     TypeSpecifierType ImageTypeSpec) {
+        // Check if the image type is supported and otherwise turn the keyword
+        // into an identifier because image types from extensions are not
+        // reserved identifiers.
+        if (!StringRef(Ext).empty() &&
+            !getActions().getOpenCLOptions().isSupported(Ext, getLangOpts())) {
+          Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+          Tok.setKind(tok::identifier);
+          return false;
+        }
+        isInvalid =
+            DS.SetTypeSpecType(ImageTypeSpec, Loc, PrevSpec, DiagID, Policy);
+        return true;
+      };
+
+      // Turn off usual access checking for template specializations and
+      // instantiations.
+      bool IsTemplateSpecOrInst =
+          (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation ||
+           TemplateInfo.Kind == ParsedTemplateInfo::ExplicitSpecialization);
+
+      switch (Tok.getKind()) {
+      default:
+        if (Tok.isRegularKeywordAttribute())
+          goto Attribute;
+
+      DoneWithDeclSpec:
+        if (!AttrsLastTime)
+          ProhibitAttributes(attrs);
+        else {
+          // Reject C++11 / C23 attributes that aren't type attributes.
+          for (const ParsedAttr &PA : attrs) {
+            if (!PA.isCXX11Attribute() && !PA.isC23Attribute() &&
+                !PA.isRegularKeywordAttribute())
+              continue;
+            if (PA.getKind() == ParsedAttr::UnknownAttribute)
+              // We will warn about the unknown attribute elsewhere (in
+              // SemaDeclAttr.cpp)
+              continue;
+            // GCC ignores this attribute when placed on the DeclSpec in [[]]
+            // syntax, so we do the same.
+            if (PA.getKind() == ParsedAttr::AT_VectorSize) {
+              Diag(PA.getLoc(), diag::warn_attribute_ignored) << PA;
+              PA.setInvalid();
+              continue;
+            }
+            // We reject AT_LifetimeBound and AT_AnyX86NoCfCheck, even though
+            // they are type attributes, because we historically haven't allowed
+            // these to be used as type attributes in C++11 / C23 syntax.
+            if (PA.isTypeAttr() &&
+                PA.getKind() != ParsedAttr::AT_LifetimeBound &&
+                PA.getKind() != ParsedAttr::AT_AnyX86NoCfCheck)
+              continue;
+            Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
+                << PA << PA.isRegularKeywordAttribute();
             PA.setInvalid();
-            continue;
           }
-          // We reject AT_LifetimeBound and AT_AnyX86NoCfCheck, even though they
-          // are type attributes, because we historically haven't allowed these
-          // to be used as type attributes in C++11 / C23 syntax.
-          if (PA.isTypeAttr() && PA.getKind() != ParsedAttr::AT_LifetimeBound &&
-              PA.getKind() != ParsedAttr::AT_AnyX86NoCfCheck)
-            continue;
-          Diag(PA.getLoc(), diag::err_attribute_not_type_attr)
-              << PA << PA.isRegularKeywordAttribute();
-          PA.setInvalid();
+
+          DS.takeAttributesFrom(attrs);
         }
 
-        DS.takeAttributesFrom(attrs);
-      }
+        // If this is not a declaration specifier token, we're done reading decl
+        // specifiers.  First verify that DeclSpec's are consistent.
+        DS.Finish(Actions, Policy);
+        return;
 
-      // If this is not a declaration specifier token, we're done reading decl
-      // specifiers.  First verify that DeclSpec's are consistent.
-      DS.Finish(Actions, Policy);
-      return;
+      // alignment-specifier
+      case tok::kw__Alignas:
+        diagnoseUseOfC11Keyword(Tok);
+        [[fallthrough]];
+      case tok::kw_alignas:
+        // _Alignas and alignas (C23, not C++) should parse the same way. The
+        // C++ parsing for alignas happens through the usual attribute parsing.
+        // This ensures that an alignas specifier can appear in a type position
+        // in C despite that not being valid in C++.
+        if (getLangOpts().C23 || Tok.getKind() == tok::kw__Alignas) {
+          if (Tok.getKind() == tok::kw_alignas)
+            Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
+          ParseAlignmentSpecifier(DS.getAttributes());
+          continue;
+        }
+        [[fallthrough]];
+      case tok::l_square:
+        if (!isAllowedCXX11AttributeSpecifier())
+          goto DoneWithDeclSpec;
 
-    // alignment-specifier
-    case tok::kw__Alignas:
-      diagnoseUseOfC11Keyword(Tok);
-      [[fallthrough]];
-    case tok::kw_alignas:
-      // _Alignas and alignas (C23, not C++) should parse the same way. The C++
-      // parsing for alignas happens through the usual attribute parsing. This
-      // ensures that an alignas specifier can appear in a type position in C
-      // despite that not being valid in C++.
-      if (getLangOpts().C23 || Tok.getKind() == tok::kw__Alignas) {
-        if (Tok.getKind() == tok::kw_alignas)
-          Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-        ParseAlignmentSpecifier(DS.getAttributes());
+      Attribute:
+        ProhibitAttributes(attrs);
+        // FIXME: It would be good to recover by accepting the attributes,
+        //        but attempting to do that now would cause serious
+        //        madness in terms of diagnostics.
+        attrs.clear();
+        attrs.Range = SourceRange();
+
+        ParseCXX11Attributes(attrs);
+        AttrsLastTime = true;
         continue;
-      }
-      [[fallthrough]];
-    case tok::l_square:
-      if (!isAllowedCXX11AttributeSpecifier())
-        goto DoneWithDeclSpec;
 
-    Attribute:
-      ProhibitAttributes(attrs);
-      // FIXME: It would be good to recover by accepting the attributes,
-      //        but attempting to do that now would cause serious
-      //        madness in terms of diagnostics.
-      attrs.clear();
-      attrs.Range = SourceRange();
+      case tok::code_completion: {
+        SemaCodeCompletion::ParserCompletionContext CCC =
+            SemaCodeCompletion::PCC_Namespace;
+        if (DS.hasTypeSpecifier()) {
+          bool AllowNonIdentifiers =
+              (getCurScope()->getFlags() &
+               (Scope::ControlScope | Scope::BlockScope |
+                Scope::TemplateParamScope | Scope::FunctionPrototypeScope |
+                Scope::AtCatchScope)) == 0;
+          bool AllowNestedNameSpecifiers =
+              DSContext == DeclSpecContext::DSC_top_level ||
+              (DSContext == DeclSpecContext::DSC_class &&
+               DS.isFriendSpecified());
 
-      ParseCXX11Attributes(attrs);
-      AttrsLastTime = true;
-      continue;
+          cutOffParsing();
+          Actions.CodeCompletion().CodeCompleteDeclSpec(
+              getCurScope(), DS, AllowNonIdentifiers,
+              AllowNestedNameSpecifiers);
+          return;
+        }
 
-    case tok::code_completion: {
-      SemaCodeCompletion::ParserCompletionContext CCC =
-          SemaCodeCompletion::PCC_Namespace;
-      if (DS.hasTypeSpecifier()) {
-        bool AllowNonIdentifiers
-          = (getCurScope()->getFlags() & (Scope::ControlScope |
-                                          Scope::BlockScope |
-                                          Scope::TemplateParamScope |
-                                          Scope::FunctionPrototypeScope |
-                                          Scope::AtCatchScope)) == 0;
-        bool AllowNestedNameSpecifiers
-          = DSContext == DeclSpecContext::DSC_top_level ||
-            (DSContext == DeclSpecContext::DSC_class && DS.isFriendSpecified());
+        // Class context can appear inside a function/block, so prioritise that.
+        if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate)
+          CCC = DSContext == DeclSpecContext::DSC_class
+                    ? SemaCodeCompletion::PCC_MemberTemplate
+                    : SemaCodeCompletion::PCC_Template;
+        else if (DSContext == DeclSpecContext::DSC_class)
+          CCC = SemaCodeCompletion::PCC_Class;
+        else if (getCurScope()->getFnParent() ||
+                 getCurScope()->getBlockParent())
+          CCC = SemaCodeCompletion::PCC_LocalDeclarationSpecifiers;
+        else if (CurParsedObjCImpl)
+          CCC = SemaCodeCompletion::PCC_ObjCImplementation;
 
         cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteDeclSpec(
-            getCurScope(), DS, AllowNonIdentifiers, AllowNestedNameSpecifiers);
+        Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), CCC);
         return;
       }
 
-      // Class context can appear inside a function/block, so prioritise that.
-      if (TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate)
-        CCC = DSContext == DeclSpecContext::DSC_class
-                  ? SemaCodeCompletion::PCC_MemberTemplate
-                  : SemaCodeCompletion::PCC_Template;
-      else if (DSContext == DeclSpecContext::DSC_class)
-        CCC = SemaCodeCompletion::PCC_Class;
-      else if (getCurScope()->getFnParent() || getCurScope()->getBlockParent())
-        CCC = SemaCodeCompletion::PCC_LocalDeclarationSpecifiers;
-      else if (CurParsedObjCImpl)
-        CCC = SemaCodeCompletion::PCC_ObjCImplementation;
+      case tok::coloncolon: // ::foo::bar
+        // C++ scope specifier.  Annotate and loop, or bail out on error.
+        if (getLangOpts().CPlusPlus &&
+            TryAnnotateCXXScopeToken(EnteringContext)) {
+          if (!DS.hasTypeSpecifier())
+            DS.SetTypeSpecError();
+          goto DoneWithDeclSpec;
+        }
+        if (Tok.is(tok::coloncolon)) // ::new or ::delete
+          goto DoneWithDeclSpec;
+        continue;
 
-      cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteOrdinaryName(getCurScope(), CCC);
-      return;
-    }
+      case tok::annot_cxxscope: {
+        if (DS.hasTypeSpecifier() || DS.isTypeAltiVecVector())
+          goto DoneWithDeclSpec;
 
-    case tok::coloncolon: // ::foo::bar
-      // C++ scope specifier.  Annotate and loop, or bail out on error.
-      if (getLangOpts().CPlusPlus &&
-          TryAnnotateCXXScopeToken(EnteringContext)) {
-        if (!DS.hasTypeSpecifier())
+        CXXScopeSpec SS;
+        if (TemplateInfo.TemplateParams)
+          SS.setTemplateParamLists(*TemplateInfo.TemplateParams);
+        Actions.RestoreNestedNameSpecifierAnnotation(
+            Tok.getAnnotationValue(), Tok.getAnnotationRange(), SS);
+
+        // We are looking for a qualified typename.
+        Token Next = NextToken();
+
+        TemplateIdAnnotation *TemplateId = Next.is(tok::annot_template_id)
+                                               ? takeTemplateIdAnnotation(Next)
+                                               : nullptr;
+        if (TemplateId && TemplateId->hasInvalidName()) {
+          // We found something like 'T::U<Args> x', but U is not a template.
+          // Assume it was supposed to be a type.
           DS.SetTypeSpecError();
-        goto DoneWithDeclSpec;
-      }
-      if (Tok.is(tok::coloncolon)) // ::new or ::delete
-        goto DoneWithDeclSpec;
-      continue;
+          ConsumeAnnotationToken();
+          break;
+        }
 
-    case tok::annot_cxxscope: {
-      if (DS.hasTypeSpecifier() || DS.isTypeAltiVecVector())
-        goto DoneWithDeclSpec;
+        if (TemplateId && TemplateId->Kind == TNK_Type_template) {
+          // We have a qualified template-id, e.g., N::A<int>
 
-      CXXScopeSpec SS;
-      if (TemplateInfo.TemplateParams)
-        SS.setTemplateParamLists(*TemplateInfo.TemplateParams);
-      Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
-                                                   Tok.getAnnotationRange(),
-                                                   SS);
+          // If this would be a valid constructor declaration with template
+          // arguments, we will reject the attempt to form an invalid type-id
+          // referring to the injected-class-name when we annotate the token,
+          // per C++ [class.qual]p2.
+          //
+          // To improve diagnostics for this case, parse the declaration as a
+          // constructor (and reject the extra template arguments later).
+          if ((DSContext == DeclSpecContext::DSC_top_level ||
+               DSContext == DeclSpecContext::DSC_class) &&
+              TemplateId->Name &&
+              Actions.isCurrentClassName(*TemplateId->Name, getCurScope(),
+                                         &SS) &&
+              isConstructorDeclarator(/*Unqualified=*/false,
+                                      /*DeductionGuide=*/false,
+                                      DS.isFriendSpecified())) {
+            // The user meant this to be an out-of-line constructor
+            // definition, but template arguments are not allowed
+            // there.  Just allow this as a constructor; we'll
+            // complain about it later.
+            goto DoneWithDeclSpec;
+          }
 
-      // We are looking for a qualified typename.
-      Token Next = NextToken();
+          DS.getTypeSpecScope() = SS;
+          ConsumeAnnotationToken(); // The C++ scope.
+          assert(Tok.is(tok::annot_template_id) &&
+                 "ParseOptionalCXXScopeSpecifier not working");
+          AnnotateTemplateIdTokenAsType(SS, AllowImplicitTypename);
+          continue;
+        }
 
-      TemplateIdAnnotation *TemplateId = Next.is(tok::annot_template_id)
-                                             ? takeTemplateIdAnnotation(Next)
-                                             : nullptr;
-      if (TemplateId && TemplateId->hasInvalidName()) {
-        // We found something like 'T::U<Args> x', but U is not a template.
-        // Assume it was supposed to be a type.
-        DS.SetTypeSpecError();
-        ConsumeAnnotationToken();
-        break;
-      }
+        if (TemplateId && TemplateId->Kind == TNK_Concept_template) {
+          DS.getTypeSpecScope() = SS;
+          // This is probably a qualified placeholder-specifier, e.g., ::C<int>
+          // auto ... Consume the scope annotation and continue to consume the
+          // template-id as a placeholder-specifier. Let the next iteration
+          // diagnose a missing auto.
+          ConsumeAnnotationToken();
+          continue;
+        }
 
-      if (TemplateId && TemplateId->Kind == TNK_Type_template) {
-        // We have a qualified template-id, e.g., N::A<int>
+        if (Next.is(tok::annot_typename)) {
+          DS.getTypeSpecScope() = SS;
+          ConsumeAnnotationToken(); // The C++ scope.
+          TypeResult T = getTypeAnnotation(Tok);
+          isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename,
+                                         Tok.getAnnotationEndLoc(), PrevSpec,
+                                         DiagID, T, Policy);
+          if (isInvalid)
+            break;
+          DS.SetRangeEnd(Tok.getAnnotationEndLoc());
+          ConsumeAnnotationToken(); // The typename
+        }
 
-        // If this would be a valid constructor declaration with template
-        // arguments, we will reject the attempt to form an invalid type-id
-        // referring to the injected-class-name when we annotate the token,
-        // per C++ [class.qual]p2.
-        //
-        // To improve diagnostics for this case, parse the declaration as a
-        // constructor (and reject the extra template arguments later).
+        if (AllowImplicitTypename == ImplicitTypenameContext::Yes &&
+            Next.is(tok::annot_template_id) &&
+            static_cast<TemplateIdAnnotation *>(Next.getAnnotationValue())
+                    ->Kind == TNK_Dependent_template_name) {
+          DS.getTypeSpecScope() = SS;
+          ConsumeAnnotationToken(); // The C++ scope.
+          AnnotateTemplateIdTokenAsType(SS, AllowImplicitTypename);
+          continue;
+        }
+
+        if (Next.isNot(tok::identifier))
+          goto DoneWithDeclSpec;
+
+        // Check whether this is a constructor declaration. If we're in a
+        // context where the identifier could be a class name, and it has the
+        // shape of a constructor declaration, process it as one.
         if ((DSContext == DeclSpecContext::DSC_top_level ||
              DSContext == DeclSpecContext::DSC_class) &&
-            TemplateId->Name &&
-            Actions.isCurrentClassName(*TemplateId->Name, getCurScope(), &SS) &&
+            Actions.isCurrentClassName(*Next.getIdentifierInfo(), getCurScope(),
+                                       &SS) &&
             isConstructorDeclarator(/*Unqualified=*/false,
                                     /*DeductionGuide=*/false,
-                                    DS.isFriendSpecified())) {
-          // The user meant this to be an out-of-line constructor
-          // definition, but template arguments are not allowed
-          // there.  Just allow this as a constructor; we'll
-          // complain about it later.
+                                    DS.isFriendSpecified(), &TemplateInfo))
           goto DoneWithDeclSpec;
-        }
 
-        DS.getTypeSpecScope() = SS;
-        ConsumeAnnotationToken(); // The C++ scope.
-        assert(Tok.is(tok::annot_template_id) &&
-               "ParseOptionalCXXScopeSpecifier not working");
-        AnnotateTemplateIdTokenAsType(SS, AllowImplicitTypename);
-        continue;
-      }
-
-      if (TemplateId && TemplateId->Kind == TNK_Concept_template) {
-        DS.getTypeSpecScope() = SS;
-        // This is probably a qualified placeholder-specifier, e.g., ::C<int>
-        // auto ... Consume the scope annotation and continue to consume the
-        // template-id as a placeholder-specifier. Let the next iteration
-        // diagnose a missing auto.
-        ConsumeAnnotationToken();
-        continue;
-      }
-
-      if (Next.is(tok::annot_typename)) {
-        DS.getTypeSpecScope() = SS;
-        ConsumeAnnotationToken(); // The C++ scope.
-        TypeResult T = getTypeAnnotation(Tok);
-        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename,
-                                       Tok.getAnnotationEndLoc(),
-                                       PrevSpec, DiagID, T, Policy);
-        if (isInvalid)
-          break;
-        DS.SetRangeEnd(Tok.getAnnotationEndLoc());
-        ConsumeAnnotationToken(); // The typename
-      }
-
-      if (AllowImplicitTypename == ImplicitTypenameContext::Yes &&
-          Next.is(tok::annot_template_id) &&
-          static_cast<TemplateIdAnnotation *>(Next.getAnnotationValue())
-                  ->Kind == TNK_Dependent_template_name) {
-        DS.getTypeSpecScope() = SS;
-        ConsumeAnnotationToken(); // The C++ scope.
-        AnnotateTemplateIdTokenAsType(SS, AllowImplicitTypename);
-        continue;
-      }
-
-      if (Next.isNot(tok::identifier))
-        goto DoneWithDeclSpec;
-
-      // Check whether this is a constructor declaration. If we're in a
-      // context where the identifier could be a class name, and it has the
-      // shape of a constructor declaration, process it as one.
-      if ((DSContext == DeclSpecContext::DSC_top_level ||
-           DSContext == DeclSpecContext::DSC_class) &&
-          Actions.isCurrentClassName(*Next.getIdentifierInfo(), getCurScope(),
-                                     &SS) &&
-          isConstructorDeclarator(/*Unqualified=*/false,
-                                  /*DeductionGuide=*/false,
-                                  DS.isFriendSpecified(),
-                                  &TemplateInfo))
-        goto DoneWithDeclSpec;
-
-      // C++20 [temp.spec] 13.9/6.
-      // This disables the access checking rules for function template explicit
-      // instantiation and explicit specialization:
-      // - `return type`.
-      SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
-
-      ParsedType TypeRep = Actions.getTypeName(
-          *Next.getIdentifierInfo(), Next.getLocation(), getCurScope(), &SS,
-          false, false, nullptr,
-          /*IsCtorOrDtorName=*/false,
-          /*WantNontrivialTypeSourceInfo=*/true,
-          isClassTemplateDeductionContext(DSContext), AllowImplicitTypename);
-
-      if (IsTemplateSpecOrInst)
-        SAC.done();
-
-      // If the referenced identifier is not a type, then this declspec is
-      // erroneous: We already checked about that it has no type specifier, and
-      // C++ doesn't have implicit int.  Diagnose it as a typo w.r.t. to the
-      // typename.
-      if (!TypeRep) {
-        if (TryAnnotateTypeConstraint())
-          goto DoneWithDeclSpec;
-        if (Tok.isNot(tok::annot_cxxscope) ||
-            NextToken().isNot(tok::identifier))
-          continue;
-        // Eat the scope spec so the identifier is current.
-        ConsumeAnnotationToken();
-        ParsedAttributes Attrs(AttrFactory);
-        if (ParseImplicitInt(DS, &SS, TemplateInfo, AS, DSContext, Attrs)) {
-          if (!Attrs.empty()) {
-            AttrsLastTime = true;
-            attrs.takeAllFrom(Attrs);
-          }
-          continue;
-        }
-        goto DoneWithDeclSpec;
-      }
-
-      DS.getTypeSpecScope() = SS;
-      ConsumeAnnotationToken(); // The C++ scope.
-
-      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
-                                     DiagID, TypeRep, Policy);
-      if (isInvalid)
-        break;
-
-      DS.SetRangeEnd(Tok.getLocation());
-      ConsumeToken(); // The typename.
-
-      continue;
-    }
-
-    case tok::annot_typename: {
-      // If we've previously seen a tag definition, we were almost surely
-      // missing a semicolon after it.
-      if (DS.hasTypeSpecifier() && DS.hasTagDefinition())
-        goto DoneWithDeclSpec;
-
-      TypeResult T = getTypeAnnotation(Tok);
-      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
-                                     DiagID, T, Policy);
-      if (isInvalid)
-        break;
-
-      DS.SetRangeEnd(Tok.getAnnotationEndLoc());
-      ConsumeAnnotationToken(); // The typename
-
-      continue;
-    }
-
-    case tok::kw___is_signed:
-      // GNU libstdc++ 4.4 uses __is_signed as an identifier, but Clang
-      // typically treats it as a trait. If we see __is_signed as it appears
-      // in libstdc++, e.g.,
-      //
-      //   static const bool __is_signed;
-      //
-      // then treat __is_signed as an identifier rather than as a keyword.
-      if (DS.getTypeSpecType() == TST_bool &&
-          DS.getTypeQualifiers() == DeclSpec::TQ_const &&
-          DS.getStorageClassSpec() == DeclSpec::SCS_static)
-        TryKeywordIdentFallback(true);
-
-      // We're done with the declaration-specifiers.
-      goto DoneWithDeclSpec;
-
-      // typedef-name
-    case tok::kw___super:
-    case tok::kw_decltype:
-    case tok::identifier:
-    ParseIdentifier: {
-      // This identifier can only be a typedef name if we haven't already seen
-      // a type-specifier.  Without this check we misparse:
-      //  typedef int X; struct Y { short X; };  as 'short int'.
-      if (DS.hasTypeSpecifier())
-        goto DoneWithDeclSpec;
-
-      // If the token is an identifier named "__declspec" and Microsoft
-      // extensions are not enabled, it is likely that there will be cascading
-      // parse errors if this really is a __declspec attribute. Attempt to
-      // recognize that scenario and recover gracefully.
-      if (!getLangOpts().DeclSpecKeyword && Tok.is(tok::identifier) &&
-          Tok.getIdentifierInfo()->getName() == "__declspec") {
-        Diag(Loc, diag::err_ms_attributes_not_enabled);
-
-        // The next token should be an open paren. If it is, eat the entire
-        // attribute declaration and continue.
-        if (NextToken().is(tok::l_paren)) {
-          // Consume the __declspec identifier.
-          ConsumeToken();
-
-          // Eat the parens and everything between them.
-          BalancedDelimiterTracker T(*this, tok::l_paren);
-          if (T.consumeOpen()) {
-            assert(false && "Not a left paren?");
-            return;
-          }
-          T.skipToEnd();
-          continue;
-        }
-      }
-
-      // In C++, check to see if this is a scope specifier like foo::bar::, if
-      // so handle it as such.  This is important for ctor parsing.
-      if (getLangOpts().CPlusPlus) {
         // C++20 [temp.spec] 13.9/6.
         // This disables the access checking rules for function template
         // explicit instantiation and explicit specialization:
         // - `return type`.
         SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
-        const bool Success = TryAnnotateCXXScopeToken(EnteringContext);
+        ParsedType TypeRep = Actions.getTypeName(
+            *Next.getIdentifierInfo(), Next.getLocation(), getCurScope(), &SS,
+            false, false, nullptr,
+            /*IsCtorOrDtorName=*/false,
+            /*WantNontrivialTypeSourceInfo=*/true,
+            isClassTemplateDeductionContext(DSContext), AllowImplicitTypename);
 
         if (IsTemplateSpecOrInst)
           SAC.done();
 
-        if (Success) {
-          if (IsTemplateSpecOrInst)
-            SAC.redelay();
-          DS.SetTypeSpecError();
+        // If the referenced identifier is not a type, then this declspec is
+        // erroneous: We already checked about that it has no type specifier,
+        // and C++ doesn't have implicit int.  Diagnose it as a typo w.r.t. to
+        // the typename.
+        if (!TypeRep) {
+          if (TryAnnotateTypeConstraint())
+            goto DoneWithDeclSpec;
+          if (Tok.isNot(tok::annot_cxxscope) ||
+              NextToken().isNot(tok::identifier))
+            continue;
+          // Eat the scope spec so the identifier is current.
+          ConsumeAnnotationToken();
+          ParsedAttributes Attrs(AttrFactory);
+          if (ParseImplicitInt(DS, &SS, TemplateInfo, AS, DSContext, Attrs)) {
+            if (!Attrs.empty()) {
+              AttrsLastTime = true;
+              attrs.takeAllFrom(Attrs);
+            }
+            continue;
+          }
           goto DoneWithDeclSpec;
         }
 
-        if (!Tok.is(tok::identifier))
-          continue;
-      }
+        DS.getTypeSpecScope() = SS;
+        ConsumeAnnotationToken(); // The C++ scope.
 
-      // Check for need to substitute AltiVec keyword tokens.
-      if (TryAltiVecToken(DS, Loc, PrevSpec, DiagID, isInvalid))
-        break;
-
-      // [AltiVec] 2.2: [If the 'vector' specifier is used] The syntax does not
-      //                allow the use of a typedef name as a type specifier.
-      if (DS.isTypeAltiVecVector())
-        goto DoneWithDeclSpec;
-
-      if (DSContext == DeclSpecContext::DSC_objc_method_result &&
-          isObjCInstancetype()) {
-        ParsedType TypeRep = Actions.ObjC().ActOnObjCInstanceType(Loc);
-        assert(TypeRep);
         isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
                                        DiagID, TypeRep, Policy);
         if (isInvalid)
           break;
 
-        DS.SetRangeEnd(Loc);
-        ConsumeToken();
+        DS.SetRangeEnd(Tok.getLocation());
+        ConsumeToken(); // The typename.
+
         continue;
       }
 
-      // If we're in a context where the identifier could be a class name,
-      // check whether this is a constructor declaration.
-      if (getLangOpts().CPlusPlus && DSContext == DeclSpecContext::DSC_class &&
-          Actions.isCurrentClassName(*Tok.getIdentifierInfo(), getCurScope()) &&
-          isConstructorDeclarator(/*Unqualified=*/true,
-                                  /*DeductionGuide=*/false,
-                                  DS.isFriendSpecified()))
-        goto DoneWithDeclSpec;
-
-      ParsedType TypeRep = Actions.getTypeName(
-          *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
-          false, false, nullptr, false, false,
-          isClassTemplateDeductionContext(DSContext));
-
-      // If this is not a typedef name, don't parse it as part of the declspec,
-      // it must be an implicit int or an error.
-      if (!TypeRep) {
-        if (TryAnnotateTypeConstraint())
+      case tok::annot_typename: {
+        // If we've previously seen a tag definition, we were almost surely
+        // missing a semicolon after it.
+        if (DS.hasTypeSpecifier() && DS.hasTagDefinition())
           goto DoneWithDeclSpec;
-        if (Tok.isNot(tok::identifier))
-          continue;
-        ParsedAttributes Attrs(AttrFactory);
-        if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
-          if (!Attrs.empty()) {
-            AttrsLastTime = true;
-            attrs.takeAllFrom(Attrs);
+
+        TypeResult T = getTypeAnnotation(Tok);
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
+                                       DiagID, T, Policy);
+        if (isInvalid)
+          break;
+
+        DS.SetRangeEnd(Tok.getAnnotationEndLoc());
+        ConsumeAnnotationToken(); // The typename
+
+        continue;
+      }
+
+      case tok::kw___is_signed:
+        // GNU libstdc++ 4.4 uses __is_signed as an identifier, but Clang
+        // typically treats it as a trait. If we see __is_signed as it appears
+        // in libstdc++, e.g.,
+        //
+        //   static const bool __is_signed;
+        //
+        // then treat __is_signed as an identifier rather than as a keyword.
+        if (DS.getTypeSpecType() == TST_bool &&
+            DS.getTypeQualifiers() == DeclSpec::TQ_const &&
+            DS.getStorageClassSpec() == DeclSpec::SCS_static)
+          TryKeywordIdentFallback(true);
+
+        // We're done with the declaration-specifiers.
+        goto DoneWithDeclSpec;
+
+        // typedef-name
+      case tok::kw___super:
+      case tok::kw_decltype:
+      case tok::identifier:
+      ParseIdentifier: {
+        // This identifier can only be a typedef name if we haven't already seen
+        // a type-specifier.  Without this check we misparse:
+        //  typedef int X; struct Y { short X; };  as 'short int'.
+        if (DS.hasTypeSpecifier())
+          goto DoneWithDeclSpec;
+
+        // If the token is an identifier named "__declspec" and Microsoft
+        // extensions are not enabled, it is likely that there will be cascading
+        // parse errors if this really is a __declspec attribute. Attempt to
+        // recognize that scenario and recover gracefully.
+        if (!getLangOpts().DeclSpecKeyword && Tok.is(tok::identifier) &&
+            Tok.getIdentifierInfo()->getName() == "__declspec") {
+          Diag(Loc, diag::err_ms_attributes_not_enabled);
+
+          // The next token should be an open paren. If it is, eat the entire
+          // attribute declaration and continue.
+          if (NextToken().is(tok::l_paren)) {
+            // Consume the __declspec identifier.
+            ConsumeToken();
+
+            // Eat the parens and everything between them.
+            BalancedDelimiterTracker T(*this, tok::l_paren);
+            if (T.consumeOpen()) {
+              assert(false && "Not a left paren?");
+              return;
+            }
+            T.skipToEnd();
+            continue;
           }
+        }
+
+        // In C++, check to see if this is a scope specifier like foo::bar::, if
+        // so handle it as such.  This is important for ctor parsing.
+        if (getLangOpts().CPlusPlus) {
+          // C++20 [temp.spec] 13.9/6.
+          // This disables the access checking rules for function template
+          // explicit instantiation and explicit specialization:
+          // - `return type`.
+          SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
+
+          const bool Success = TryAnnotateCXXScopeToken(EnteringContext);
+
+          if (IsTemplateSpecOrInst)
+            SAC.done();
+
+          if (Success) {
+            if (IsTemplateSpecOrInst)
+              SAC.redelay();
+            DS.SetTypeSpecError();
+            goto DoneWithDeclSpec;
+          }
+
+          if (!Tok.is(tok::identifier))
+            continue;
+        }
+
+        // Check for need to substitute AltiVec keyword tokens.
+        if (TryAltiVecToken(DS, Loc, PrevSpec, DiagID, isInvalid))
+          break;
+
+        // [AltiVec] 2.2: [If the 'vector' specifier is used] The syntax does
+        // not
+        //                allow the use of a typedef name as a type specifier.
+        if (DS.isTypeAltiVecVector())
+          goto DoneWithDeclSpec;
+
+        if (DSContext == DeclSpecContext::DSC_objc_method_result &&
+            isObjCInstancetype()) {
+          ParsedType TypeRep = Actions.ObjC().ActOnObjCInstanceType(Loc);
+          assert(TypeRep);
+          isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
+                                         DiagID, TypeRep, Policy);
+          if (isInvalid)
+            break;
+
+          DS.SetRangeEnd(Loc);
+          ConsumeToken();
           continue;
         }
-        goto DoneWithDeclSpec;
-      }
 
-      // Likewise, if this is a context where the identifier could be a template
-      // name, check whether this is a deduction guide declaration.
-      CXXScopeSpec SS;
-      if (getLangOpts().CPlusPlus17 &&
-          (DSContext == DeclSpecContext::DSC_class ||
-           DSContext == DeclSpecContext::DSC_top_level) &&
-          Actions.isDeductionGuideName(getCurScope(), *Tok.getIdentifierInfo(),
-                                       Tok.getLocation(), SS) &&
-          isConstructorDeclarator(/*Unqualified*/ true,
-                                  /*DeductionGuide*/ true))
-        goto DoneWithDeclSpec;
+        // If we're in a context where the identifier could be a class name,
+        // check whether this is a constructor declaration.
+        if (getLangOpts().CPlusPlus &&
+            DSContext == DeclSpecContext::DSC_class &&
+            Actions.isCurrentClassName(*Tok.getIdentifierInfo(),
+                                       getCurScope()) &&
+            isConstructorDeclarator(/*Unqualified=*/true,
+                                    /*DeductionGuide=*/false,
+                                    DS.isFriendSpecified()))
+          goto DoneWithDeclSpec;
 
-      isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
-                                     DiagID, TypeRep, Policy);
-      if (isInvalid)
-        break;
+        ParsedType TypeRep = Actions.getTypeName(
+            *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
+            false, false, nullptr, false, false,
+            isClassTemplateDeductionContext(DSContext));
 
-      DS.SetRangeEnd(Tok.getLocation());
-      ConsumeToken(); // The identifier
-
-      // Objective-C supports type arguments and protocol references
-      // following an Objective-C object or object pointer
-      // type. Handle either one of them.
-      if (Tok.is(tok::less) && getLangOpts().ObjC) {
-        SourceLocation NewEndLoc;
-        TypeResult NewTypeRep = parseObjCTypeArgsAndProtocolQualifiers(
-                                  Loc, TypeRep, /*consumeLastToken=*/true,
-                                  NewEndLoc);
-        if (NewTypeRep.isUsable()) {
-          DS.UpdateTypeRep(NewTypeRep.get());
-          DS.SetRangeEnd(NewEndLoc);
+        // If this is not a typedef name, don't parse it as part of the
+        // declspec, it must be an implicit int or an error.
+        if (!TypeRep) {
+          if (TryAnnotateTypeConstraint())
+            goto DoneWithDeclSpec;
+          if (Tok.isNot(tok::identifier))
+            continue;
+          ParsedAttributes Attrs(AttrFactory);
+          if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext,
+                               Attrs)) {
+            if (!Attrs.empty()) {
+              AttrsLastTime = true;
+              attrs.takeAllFrom(Attrs);
+            }
+            continue;
+          }
+          goto DoneWithDeclSpec;
         }
+
+        // Likewise, if this is a context where the identifier could be a
+        // template name, check whether this is a deduction guide declaration.
+        CXXScopeSpec SS;
+        if (getLangOpts().CPlusPlus17 &&
+            (DSContext == DeclSpecContext::DSC_class ||
+             DSContext == DeclSpecContext::DSC_top_level) &&
+            Actions.isDeductionGuideName(getCurScope(),
+                                         *Tok.getIdentifierInfo(),
+                                         Tok.getLocation(), SS) &&
+            isConstructorDeclarator(/*Unqualified*/ true,
+                                    /*DeductionGuide*/ true))
+          goto DoneWithDeclSpec;
+
+        isInvalid = DS.SetTypeSpecType(DeclSpec::TST_typename, Loc, PrevSpec,
+                                       DiagID, TypeRep, Policy);
+        if (isInvalid)
+          break;
+
+        DS.SetRangeEnd(Tok.getLocation());
+        ConsumeToken(); // The identifier
+
+        // Objective-C supports type arguments and protocol references
+        // following an Objective-C object or object pointer
+        // type. Handle either one of them.
+        if (Tok.is(tok::less) && getLangOpts().ObjC) {
+          SourceLocation NewEndLoc;
+          TypeResult NewTypeRep = parseObjCTypeArgsAndProtocolQualifiers(
+              Loc, TypeRep, /*consumeLastToken=*/true, NewEndLoc);
+          if (NewTypeRep.isUsable()) {
+            DS.UpdateTypeRep(NewTypeRep.get());
+            DS.SetRangeEnd(NewEndLoc);
+          }
+        }
+
+        // Need to support trailing type qualifiers (e.g. "id<p> const").
+        // If a type specifier follows, it will be diagnosed elsewhere.
+        continue;
       }
 
-      // Need to support trailing type qualifiers (e.g. "id<p> const").
-      // If a type specifier follows, it will be diagnosed elsewhere.
-      continue;
-    }
+        // type-name or placeholder-specifier
+      case tok::annot_template_id: {
+        TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
 
-      // type-name or placeholder-specifier
-    case tok::annot_template_id: {
-      TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-
-      if (TemplateId->hasInvalidName()) {
-        DS.SetTypeSpecError();
-        break;
-      }
-
-      if (TemplateId->Kind == TNK_Concept_template) {
-        // If we've already diagnosed that this type-constraint has invalid
-        // arguments, drop it and just form 'auto' or 'decltype(auto)'.
-        if (TemplateId->hasInvalidArgs())
-          TemplateId = nullptr;
-
-        // Any of the following tokens are likely the start of the user
-        // forgetting 'auto' or 'decltype(auto)', so diagnose.
-        // Note: if updating this list, please make sure we update
-        // isCXXDeclarationSpecifier's check for IsPlaceholderSpecifier to have
-        // a matching list.
-        if (NextToken().isOneOf(tok::identifier, tok::kw_const,
-                                tok::kw_volatile, tok::kw_restrict, tok::amp,
-                                tok::ampamp)) {
-          Diag(Loc, diag::err_placeholder_expected_auto_or_decltype_auto)
-              << FixItHint::CreateInsertion(NextToken().getLocation(), "auto");
-          // Attempt to continue as if 'auto' was placed here.
-          isInvalid = DS.SetTypeSpecType(TST_auto, Loc, PrevSpec, DiagID,
-                                         TemplateId, Policy);
+        if (TemplateId->hasInvalidName()) {
+          DS.SetTypeSpecError();
           break;
         }
-        if (!NextToken().isOneOf(tok::kw_auto, tok::kw_decltype))
+
+        if (TemplateId->Kind == TNK_Concept_template) {
+          // If we've already diagnosed that this type-constraint has invalid
+          // arguments, drop it and just form 'auto' or 'decltype(auto)'.
+          if (TemplateId->hasInvalidArgs())
+            TemplateId = nullptr;
+
+          // Any of the following tokens are likely the start of the user
+          // forgetting 'auto' or 'decltype(auto)', so diagnose.
+          // Note: if updating this list, please make sure we update
+          // isCXXDeclarationSpecifier's check for IsPlaceholderSpecifier to
+          // have a matching list.
+          if (NextToken().isOneOf(tok::identifier, tok::kw_const,
+                                  tok::kw_volatile, tok::kw_restrict, tok::amp,
+                                  tok::ampamp)) {
+            Diag(Loc, diag::err_placeholder_expected_auto_or_decltype_auto)
+                << FixItHint::CreateInsertion(NextToken().getLocation(),
+                                              "auto");
+            // Attempt to continue as if 'auto' was placed here.
+            isInvalid = DS.SetTypeSpecType(TST_auto, Loc, PrevSpec, DiagID,
+                                           TemplateId, Policy);
+            break;
+          }
+          if (!NextToken().isOneOf(tok::kw_auto, tok::kw_decltype))
             goto DoneWithDeclSpec;
 
         if (TemplateId && !isInvalid && Actions.CheckTypeConstraint(TemplateId))
@@ -4473,6 +4512,9 @@ void Parser::ParseDeclarationSpecifiers(
       ConsumedEnd = PrevTokLocation;
       break;
     }
+#define PRECISION_PARSEDECLARATIONSPECIFIERS
+#include "clang/Precision/PrecisionTypeParsers.cpp.inc"
+#undef PRECISION_PARSEDECLARATIONSPECIFIERS
     case tok::kw___int128:
       isInvalid = DS.SetTypeSpecType(DeclSpec::TST_int128, Loc, PrevSpec,
                                      DiagID, Policy);
@@ -5768,7 +5810,9 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
   case tok::kw___vector:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
-
+#define PRECISION_TYPE(name, lcname, ucname, keyword) case tok::kw_##keyword:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
   case tok::kw_struct:
@@ -5852,6 +5896,9 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___vector:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define PRECISION_TYPE(name, lcname, ucname, keyword) case tok::kw_##keyword:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:
@@ -6072,6 +6119,9 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw__Decimal64:
   case tok::kw__Decimal128:
   case tok::kw___vector:
+#define PRECISION_TYPE(name, lcname, ucname, keyword) case tok::kw_##keyword:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 
     // struct-or-union-specifier (C99) or class-specifier (C++)
   case tok::kw_class:

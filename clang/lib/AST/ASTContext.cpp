@@ -880,6 +880,9 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
       DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
+#define PRECISION_TYPE(name, lcname, ucname, kw) Dependent##name##Types(this_()),
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
       ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
       SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
@@ -2277,6 +2280,15 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = Target->getBitIntWidth(EIT->getNumBits());
     break;
   }
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name: {                                                           \
+    const auto *PT = cast<name##Type>(T);                                      \
+    Align = Target->getPrecisionTypeAlign(PT->getWidth());                     \
+    Width = Target->getPrecisionTypeWidth(PT->getWidth());                     \
+    break;                                                                     \
+  }
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case Type::Record:
   case Type::Enum: {
     const auto *TT = cast<TagType>(T);
@@ -3689,6 +3701,11 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::PackIndexing:
   case Type::BitInt:
   case Type::DependentBitInt:
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  case Type::name:                                                             \
+  case Type::Dependent##name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
   case Type::ArrayParameter:
     llvm_unreachable("type should never be variably-modified");
 
@@ -4663,6 +4680,10 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
   Types.push_back(New);
   return QualType(New, 0);
 }
+
+#define PRECISION_ASTCONTEXT_GETTYPE_IMPL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTCONTEXT_GETTYPE_IMPL
 
 #ifndef NDEBUG
 static bool NeedsInjectedClassNameType(const RecordDecl *D) {
@@ -8643,6 +8664,10 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       *NotEncodedT = T;
     return;
 
+#define PRECISION_TYPE(name, lcname, ucname, kw) case Type::name:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+    
   case Type::BitInt:
     if (NotEncodedT)
       *NotEncodedT = T;
@@ -11008,6 +11033,9 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return {};
     return LHS;
   }
+#define PRECISION_ASTCONTEXT_MERGETYPE
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTCONTEXT_MERGETYPE
   }
 
   llvm_unreachable("Invalid Type::Class!");
@@ -12843,6 +12871,11 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(Record)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  SUGAR_FREE_TYPE(name)                                                        \
+  SUGAR_FREE_TYPE(Dependent##name)
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 #undef SUGAR_FREE_TYPE
 #define NON_UNIQUE_TYPE(Class) UNEXPECTED_TYPE(Class, "non-unique")
     NON_UNIQUE_TYPE(TypeOfExpr)
@@ -13189,6 +13222,9 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(RValueReference)
     CANONICAL_TYPE(VariableArray)
     CANONICAL_TYPE(Vector)
+#define PRECISION_TYPE(name, lcname, ucname, kw) CANONICAL_TYPE(name)
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 #undef CANONICAL_TYPE
 
 #undef UNEXPECTED_TYPE

@@ -1400,6 +1400,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
   }
+#define PRECISION_ASTTEQUIVALENT_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_ASTTEQUIVALENT_DECL
   } // end switch
 
   return true;

@@ -433,6 +433,10 @@ KEYWORD(_Accum                      , KEYFIXEDPOINT)
 KEYWORD(_Fract                      , KEYFIXEDPOINT)
 KEYWORD(_Sat                        , KEYFIXEDPOINT)
 
+#define PRECISION_TYPE(name, lcname, ucname, kw) KEYWORD(kw, KEYALL)
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
 KEYWORD(_Decimal64                  , KEYALL)

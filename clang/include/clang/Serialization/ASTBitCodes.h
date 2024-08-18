@@ -1131,6 +1131,11 @@ enum TypeCode {
   TYPE_##CODE_ID = CODE_VALUE,
 #include "clang/Serialization/TypeBitCodes.def"
 
+#define PRECISION_TYPE(name, lcname, ucname, kw)                               \
+  TYPE_##ucname##_ID, TYPE_DEPENDENT_##ucname##_ID,
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+
   /// An ExtQualType record.
   TYPE_EXT_QUAL = 1
 };

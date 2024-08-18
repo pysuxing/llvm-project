@@ -157,6 +157,15 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 #define TYPE_BIT_CODE(CLASS_ID, CODE_ID, CODE_VALUE) \
   case Type::CLASS_ID: return TYPE_##CODE_ID;
 #include "clang/Serialization/TypeBitCodes.def"
+
+#define PRECISION_TYPE(name, lcname, ucname, kw)                               \
+  case Type::name:                                                             \
+    return TYPE_##ucname##_ID;                                                 \
+  case Type::Dependent##name:                                                  \
+    return TYPE_DEPENDENT_##ucname##_ID;
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+
   case Type::Builtin:
     llvm_unreachable("shouldn't be serializing a builtin type this way");
   }
@@ -663,6 +672,17 @@ void TypeLocWriter::VisitDependentBitIntTypeLoc(
     clang::DependentBitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
+
+#define PRECISION_TYPE(name, lcname, ucname, kw)                                       \
+  void TypeLocWriter::Visit##name##TypeLoc(clang::name##TypeLoc TL) {          \
+    addSourceLocation(TL.getNameLoc());                                        \
+  }                                                                            \
+  void TypeLocWriter::VisitDependent##name##TypeLoc(                           \
+      clang::Dependent##name##TypeLoc TL) {                                    \
+    addSourceLocation(TL.getNameLoc());                                        \
+  }
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
 
 void ASTWriter::WriteTypeAbbrevs() {
   using namespace llvm;

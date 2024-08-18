@@ -898,6 +898,15 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
         DS.getRepAsExpr()->containsUnexpandedParameterPack())
       return true;
     break;
+#define PRECISION_TYPE(name, lcname, ucname, kw) case TST_##lcname:
+#include "clang/Precision/PrecisionTypeList.inc"
+#undef PRECISION_TYPE
+    for (auto *Arg : DS.getPrecisionTypeArgs()) {
+      assert(Arg);
+      if (Arg->containsUnexpandedParameterPack())
+        return true;
+    }
+    break;
 
   case TST_unspecified:
   case TST_void:

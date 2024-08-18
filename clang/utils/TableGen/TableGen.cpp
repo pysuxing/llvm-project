@@ -108,7 +108,12 @@ enum ActionType {
   GenDiagDocs,
   GenOptDocs,
   GenDataCollectors,
-  GenTestPragmaAttributeSupportedAttributes
+  GenTestPragmaAttributeSupportedAttributes,
+  GenPrecisionTypeNodes,
+  GenPrecisionTypeProperties,
+  GenPrecisionTypeList,
+  GenPrecisionParser,
+  GenPrecisionAST
 };
 
 namespace {
@@ -305,7 +310,17 @@ cl::opt<ActionType> Action(
         clEnumValN(GenTestPragmaAttributeSupportedAttributes,
                    "gen-clang-test-pragma-attribute-supported-attributes",
                    "Generate a list of attributes supported by #pragma clang "
-                   "attribute for testing purposes")));
+                   "attribute for testing purposes"),
+        clEnumValN(GenPrecisionTypeNodes, "gen-precision-type-nodes",
+                   "Generate precision types nodes"),
+        clEnumValN(GenPrecisionTypeProperties, "gen-precision-type-properties",
+                   "Generate precision type properties"),
+        clEnumValN(GenPrecisionTypeList, "gen-precision-type-list",
+                   "Generate precision type list"),
+        clEnumValN(GenPrecisionParser, "gen-precision-parser",
+                   "Generate parser for custom precision types"),
+        clEnumValN(GenPrecisionAST, "gen-precision-ast",
+                   "Generate AST code for custom precision types")));
 
 cl::opt<std::string>
 ClangComponent("clang-component",
@@ -570,6 +585,21 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenTestPragmaAttributeSupportedAttributes:
     EmitTestPragmaAttributeSupportedAttributes(Records, OS);
+    break;
+  case GenPrecisionTypeNodes:
+    EmitPrecisionTypeNodes(Records, OS);
+    break;
+  case GenPrecisionTypeProperties:
+    EmitPrecisionTypeProperties(Records, OS);
+    break;
+  case GenPrecisionTypeList:
+    EmitPrecisionTypeList(Records, OS);
+    break;
+  case GenPrecisionParser:
+    EmitPrecisionParser(Records, OS);
+    break;
+  case GenPrecisionAST:
+    EmitPrecisionAST(Records, OS);
     break;
   }
 

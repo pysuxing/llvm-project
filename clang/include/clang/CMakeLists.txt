@@ -1,3 +1,4 @@
+add_subdirectory(Precision)
 add_subdirectory(AST)
 add_subdirectory(Basic)
 if(CLANG_ENABLE_CIR)

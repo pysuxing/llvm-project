@@ -11560,6 +11560,10 @@ public:
   QualType BuildWritePipeType(QualType T, SourceLocation Loc);
   QualType BuildBitIntType(bool IsUnsigned, Expr *BitWidth, SourceLocation Loc);
 
+#define PRECISION_SEMA_METHODS_DECL
+#include "clang/Precision/PrecisionTypeAST.inc"
+#undef PRECISION_SEMA_METHODS_DECL
+  
   TypeSourceInfo *GetTypeForDeclarator(Declarator &D);
   TypeSourceInfo *GetTypeForDeclaratorCast(Declarator &D, QualType FromTy);
 
