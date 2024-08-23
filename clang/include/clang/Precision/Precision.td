@@ -1,4 +1,4 @@
-//===-- Precision.td - Custom precision types --------------*- tablegen -*-===//
+//===-- PrecisionOps.td - Precision dialect definition ------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,42 +7,67 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Custom precision types
+/// Definition of the Precision dialect
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_PRECISION_POSIT
-#define LLVM_CLANG_PRECISION_POSIT
+#ifndef LLVM_CLANG_PRECISION_PRECISION
+#define LLVM_CLANG_PRECISION_PRECISION
 
-include "clang/Precision/PrecisionBase.td"
+include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/OpBase.td"
+include "clang/Precision/PrecisionTypeInterface.td"
 
-def Width : TypeParameter<"Width", "n">;
-def ExpSize : TypeParameter<"ExpSize", "es">;
+def Precision_Dialect : Dialect {
+  let name = "precision";
+  let summary = "A high-level dialect for custom precision real types";
+  let description = [{}];
+  let dependentDialects = [];
+  let cppNamespace = "::mlir::precision";
 
-def PositType : PrecisionType<"Posit", [Width, ExpSize]> {
-  let width = (val Width);
-  // defvar n = Width;
-  // defvar es = ExpSize;
-  // defvar sign = (msb Binary);
-  // defvar binary = (cond sign, (neg Binary), Binary)
-  // defvar binary1 = (shl binary, 1);
-  // defvar k = (clb binary1, (msb binary1));
-  // defvar binary2 = (shl binary1, (add k, 1));
-  // defvar e = (msb binary2, es);
-  // defvar binary3 = (shl binary2, es)
-  // defvar fs = (sub n, (add 1, (add es, (add k, 1))))
-  // defvar fraction = (cond (gt fs, 0), (msb binary3, fs), 0)
-  // defvar r = (cond sign, (sub 0, k), (sub k, 1))
-
-  // let width = (val n);
+  // let hasConstantMaterializer = 0;
+  // let hasNonDefaultDestructor = 0;
+  // let hasOperationAttrVerify = 0;
+  // let hasRegionArgAttrVerify = 0;
+  // let hasRegionResultAttrVerify = 0;
+  // let hasOperationInterfaceFallback = 0;
+  let useDefaultAttributePrinterParser = 1;
+  let useDefaultTypePrinterParser = 1;
+  // let hasCanonicalizer = 0;
+  // let isExtensible = 0;
+  // let usePropertiesForAttributes = 1;
+  // let extraClassDeclaration = [{}];
 }
 
-def FloatingPointType : PrecisionType<"FloatingPoint", [Width, ExpSize]> {
-  let keyword = "ieeefp";
-  let width = (val Width);
-  let extraASTTypeDecls = [{
-    unsigned int getFractionSize() const { return getWidth() - 1 - getExpSize(); }
-  }];
+class Precision_Type<string name, string typeMnemonic, list<Trait> traits = []>
+  : TypeDef<Precision_Dialect, name, traits # [DeclareTypeInterfaceMethods<PrecisionTypeInterface>]> {
+  // let cppBaseClassName = "::mlir::Type";
+  // let description = "";
+  // let storageClass = name # "TypeStorage";
+  // let storageNamespace = "detail";
+  // let genStorageClass = 1;
+  // let hasStorageCustomConstructor = 0;
+  // let parameters = (ins);
+  // let builders = ?;
+  // let traits = traits;
+  let mnemonic = typeMnemonic;
+  // let assemblyFormat = ?;
+  // let hasCustomAssemblyFormat = 0;
+  // let genAccessors = 1;
+  // let skipDefaultBuilders = 0;
+  // let genVerifyDecl = 0;
+  // let extraClassDeclaration = [{}];
+  // let extraClassDefinition = [{}];
+  // let cppType = dialect.cppNamespace # "::" # cppClassName;
+  // let typeName = dialect.name # "." # mnemonic;
 }
 
-#endif // LLVM_CLANG_PRECISION_POSIT
+def Precision_GenericType : Precision_Type<"Generic", "generic"> {
+  let description = "The generic real type using scientific notation, i.e., the (sign, significants, exponent) triple.";
+  let parameters = (ins "int":$precision);
+  let assemblyFormat = "`<` $precision `>`";
+}
+
+include "clang/Precision/PrecisionMLIRTypes.inc"
+
+#endif // LLVM_CLANG_PRECISION_PRECISION

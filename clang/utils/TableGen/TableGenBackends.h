@@ -162,6 +162,7 @@ void EmitPrecisionTypeList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitPrecisionParser(llvm::RecordKeeper &Records,
                               llvm::raw_ostream &OS);
 void EmitPrecisionAST(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitPrecisionMLIRTypes(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 } // end namespace clang
 
 #endif

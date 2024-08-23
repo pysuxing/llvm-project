@@ -113,7 +113,8 @@ enum ActionType {
   GenPrecisionTypeProperties,
   GenPrecisionTypeList,
   GenPrecisionParser,
-  GenPrecisionAST
+  GenPrecisionAST,
+  GenPrecisionMLIRTypes
 };
 
 namespace {
@@ -320,7 +321,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenPrecisionParser, "gen-precision-parser",
                    "Generate parser for custom precision types"),
         clEnumValN(GenPrecisionAST, "gen-precision-ast",
-                   "Generate AST code for custom precision types")));
+                   "Generate AST code for custom precision types"),
+        clEnumValN(GenPrecisionMLIRTypes, "gen-precision-mlir-types",
+                   "Generate MLIR type definitions for precision types")));
 
 cl::opt<std::string>
 ClangComponent("clang-component",
@@ -600,6 +603,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenPrecisionAST:
     EmitPrecisionAST(Records, OS);
+    break;
+  case GenPrecisionMLIRTypes:
+    EmitPrecisionMLIRTypes(Records, OS);
     break;
   }
 

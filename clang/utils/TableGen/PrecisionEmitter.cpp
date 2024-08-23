@@ -1,6 +1,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 // #include "llvm/TableGen/Error.h"
@@ -27,8 +28,8 @@ public:
 }; // class PreprocessorGuard
 
 static std::string BuildTypeParameterList(ArrayRef<Record *> Parameters,
-                                             const char *Format,
-                                             StringRef Sep) {
+                                          const char *Format,
+                                          StringRef Sep) {
   std::string Str;
   raw_string_ostream SOS(Str);
   llvm::interleave(
@@ -47,7 +48,7 @@ static std::string BuildTypeParameterList(ArrayRef<Record *> Parameters,
 namespace clang {
 
 void EmitPrecisionTypeList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
-  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionType");
+  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionTypeDef");
   for (auto *TypeRecord : PrecisionTypes) {
     auto Name = TypeRecord->getValueAsString("name");
     auto Keyword = TypeRecord->getValueAsString("keyword");
@@ -59,7 +60,7 @@ void EmitPrecisionTypeList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
 
 void EmitPrecisionTypeNodes(llvm::RecordKeeper &Records,
                             llvm::raw_ostream &OS) {
-  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionType");
+  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionTypeDef");
   for (auto *TypeRecord : PrecisionTypes) {
     auto Name = TypeRecord->getValueAsString("name");
     OS << "def " << Name << "Type : TypeNode<Type>;\n";
@@ -98,7 +99,7 @@ void EmitPrecisionTypeProperties(llvm::RecordKeeper &Records,
       let Read = [{{ node->get{0}() }];
     }
   )";
-  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionType");
+  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionTypeDef");
   for (auto *TypeRecord : PrecisionTypes) {
     auto Name = TypeRecord->getValueAsString("name");
     // PFIXME handle non parameterized types here
@@ -112,7 +113,7 @@ void EmitPrecisionTypeProperties(llvm::RecordKeeper &Records,
 }
 
 void EmitPrecisionParser(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
-  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionType");
+  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionTypeDef");
   //---------------------------------------------------------//
   // Parser
   //---------------------------------------------------------//
@@ -164,7 +165,7 @@ void EmitPrecisionParser(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
 }
 
 void EmitPrecisionAST(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
-  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionType");
+  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionTypeDef");
   const static char *ASTTypeDeclBanner = R"(
     //===----------------------------------------------------------------------===//
     ///
@@ -195,7 +196,6 @@ void EmitPrecisionAST(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
       }
 
       static bool classof(const Type *T) {{ return T->getTypeClass() == {0}; }
-      {6}
     };
   )";
 
@@ -238,8 +238,7 @@ void EmitPrecisionAST(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
           BuildTypeParameterList(
               Parameters, "unsigned int get{0}() const {{ return {0}; }", "\n"),
           BuildTypeParameterList(Parameters, "{0}", ", "),
-          BuildTypeParameterList(Parameters, "ID.AddInteger({0});", "\n"),
-          TypeRecord->getValueAsString("extraASTTypeDecls"));
+          BuildTypeParameterList(Parameters, "ID.AddInteger({0});", "\n"));
       OS << llvm::formatv(
           DependentASTTypeTemplate, Name,
           BuildTypeParameterList(Parameters, "Expr *{0};", "\n"),
@@ -920,6 +919,39 @@ void EmitPrecisionAST(llvm::RecordKeeper &Records, llvm::raw_ostream &OS) {
           BuildTypeParameterList(Parameters, "{0}Lit", ", "),
           BuildTypeParameterList(Parameters, "{0}", ", "));
     }
+  }
+}
+
+void EmitPrecisionMLIRTypes(llvm::RecordKeeper &Records,
+                            llvm::raw_ostream &OS) {
+  auto PrecisionTypes = Records.getAllDerivedDefinitions("PrecisionTypeDef");
+  const static char *ASTTypeDeclBanner = R"(
+//===----------------------------------------------------------------------===//
+// Precision Types
+//===----------------------------------------------------------------------===//
+  )";
+  // Format arguments: cppClassname, summary, description, parameter list, assembly format
+  static const char *PrecisionTypeTemplate = R"(
+def Precision_{0}Type : Precision_Type<"{0}", "{1}"> {{
+  let description = [{{
+    {2}
+  }];
+  let parameters = (ins {3});
+  let assemblyFormat = "`<` {4} `>`";
+}
+  )";
+  OS << ASTTypeDeclBanner;
+  for (auto *TypeRecord : PrecisionTypes) {
+    auto Name = TypeRecord->getValueAsString("name");
+    auto Mnemonic = TypeRecord->getValueAsString("mnemonic");
+    auto Description = TypeRecord->getValueAsString("description");
+    auto Parameters = TypeRecord->getValueAsListOfDefs("parameters");
+    // PFIXME handle non parameterized types here
+    assert(not Parameters.empty());
+    OS << llvm::formatv(
+        PrecisionTypeTemplate, Name, Mnemonic, Description,
+        BuildTypeParameterList(Parameters, "\"int\":${0}", ", "),
+        BuildTypeParameterList(Parameters, "${0}", " `,` "));
   }
 }
 
