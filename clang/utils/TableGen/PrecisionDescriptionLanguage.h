@@ -9,12 +9,17 @@
 #ifndef CLANG_UTILS_TABLEGEN_PRECISIONDESCRIPTIONLANGUAGE_H
 #define CLANG_UTILS_TABLEGEN_PRECISIONDESCRIPTIONLANGUAGE_H
 
+#include "clang/AST/Type.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
+#include <array>
 #include <memory>
+#include <utility>
 
 namespace clang {
 namespace tblgen {
@@ -91,67 +96,164 @@ enum class PDLOperatorKind {
 class PDLContext;
 
 class PDLValue {
-protected:
-  PDLContext *ctx;
-  llvm::Record *record;
+public:
+  enum Kind { Literal, Named, Operator };
 
 protected:
-  PDLValue() = default;
-  PDLValue(PDLContext *ctx, llvm::Record *record) : record(record) {}
+  llvm::PointerIntPair<PDLContext *, 3, Kind> ctx;
+  union {
+    int value;
+    llvm::Record *record;
+  };
+
+protected:
+  explicit PDLValue(Kind kind, PDLContext *ctx, llvm::Record *record)
+      : ctx(ctx, kind), record(record) {}
+  explicit PDLValue(PDLContext *ctx, int value)
+      : ctx(ctx, Literal), value(value) {}
 
 public:
-  PDLContext *getContext() const { return ctx; }
-  llvm::Record *getInit() const { return record; }
-  PDLTypeKind getType() const;
+  static bool classOf(PDLValue *value) { return true; }
+
+public:
+  PDLContext *getContext() const { return ctx.getPointer(); }
+  llvm::Record *getRecord() const { return record; }
+  Kind getKind() const { return ctx.getInt(); }
+  PDLTypeKind getType() const {
+    if (getKind() == Literal)
+      return PDLTypeKind::Integer;
+    if (getKind() == Operator) {
+    }
+    auto *type = getRecord()->getValueAsDef("type");
+    return type->getName() == "IntType" ? PDLTypeKind::Integer
+                                        : PDLTypeKind::Binary;
+  }
+  // bool operator==(const PDLValue &other) const;
+  // bool operator!=(const PDLValue &other) const { return not operator==(other); }
+  bool isDynamic() const;
 };
 
 class PDLLiteral : public PDLValue {
   friend class PDLContext;
+
 private:
-  using PDLValue::PDLValue;
+  PDLLiteral(PDLContext *ctx, int value) : PDLValue(ctx, value) {}
 
 public:
-  int getValue() const;
+  static bool classOf(PDLValue *value) {
+    return value->getKind() == Literal;
+  }
+
+public:
+  int getValue() const {
+    return getKind() == Literal ? value : getRecord()->getValueAsInt("value");
+  }
 };
 
 class PDLNamedValue : public PDLValue {
   friend class PDLContext;
+
 private:
-  using PDLValue::PDLValue;
+  PDLNamedValue(PDLContext *ctx, llvm::Record *record)
+      : PDLValue(Named, ctx, record) {}
 
 public:
-  llvm::StringRef getName() const;
-  llvm::StringRef getAbbrivation() const;
+  static bool classOf(PDLValue *value) { return value->getKind() == Named; }
+
+public:
+  llvm::StringRef getName() const {
+    return getRecord()->getValueAsString("name");
+  }
+  llvm::StringRef getAbbrivation() const {
+    return getRecord()->getValueAsString("abbreviation");
+  }
+  bool getDynamic() const { return getRecord()->getValueAsBit("dynamic"); }
+  bool isPredefined() const {
+    return not getRecord()->isAnonymous() and
+           getRecord()->getName().starts_with("__");
+  }
 };
 
 class PDLOperator : public PDLValue {
   friend class PDLContext;
+
 private:
   PDLOperatorKind opkind;
   llvm::SmallVector<PDLValue *, 3> operands;
 
 private:
   PDLOperator(PDLContext *ctx, llvm::Record *record);
+  PDLOperator(PDLContext *ctx, PDLOperatorKind opkind,
+              llvm::ArrayRef<PDLValue *> operands)
+      : PDLValue(Operator, ctx, nullptr), opkind(opkind),
+        operands(operands.begin(), operands.end()) {}
 
 public:
+  static bool classOf(PDLValue *value) {
+    return value->getKind() == Operator;
+  }
+
+public:
+  bool isArtificial() const { return getRecord() == nullptr; }
   PDLOperatorKind getOperatorKind() const { return opkind; }
+  bool isCommutative() const {
+    return opkind == PDLOperatorKind::add or opkind == PDLOperatorKind::land or
+           opkind == PDLOperatorKind::lor;
+  }
+  int getNumOperands() const { return operands.size(); }
   llvm::ArrayRef<PDLValue *> getOperands() const { return operands; }
+  PDLValue *getOperand(int Index) const { return operands[Index]; }
+  template <typename T> T *getOperandAs(int Index) const {
+    return llvm::dyn_cast<T>(operands[Index]);
+  }
 };
 
-class PDLContext {
+class alignas(8) PDLContext {
 private:
   llvm::DenseMap<llvm::Record *, std::unique_ptr<PDLValue>> values;
+  llvm::SmallVector<std::unique_ptr<PDLLiteral>, 0> literals;
+  llvm::SmallVector<std::unique_ptr<PDLOperator>, 0> operators;
+  // predefined named values
+  PDLValue *__binary;
+  PDLValue *__sign;
+  PDLValue *__exponent;
+  PDLValue *__significants;
+  // small integer literals for convinience
+  static constexpr int SmallIntegerLimit = 65;
+  std::array<std::unique_ptr<PDLValue>, SmallIntegerLimit> smallIntegers;
 
 public:
   explicit PDLContext() = default;
   ~PDLContext() = default;
+
 public:
-  PDLValue *create(llvm::Record *record);
-  PDLValue *find(llvm::Record *record) const {
-    auto iter = values.find(record);
-    return iter == values.end()? nullptr : iter->getSecond().get();
-  }
+  // Get a PDLValue, create if not exists.
+  PDLValue *get(llvm::Record *record);
+  PDLLiteral *get(int value);
+  PDLOperator *get(PDLOperatorKind opkind, llvm::ArrayRef<PDLValue *> operands);
 };
+
+class PDLAnalyzer {
+private:
+  PDLContext &ctx;
+  llvm::DenseMap<PDLValue *, PDLValue *> canonicalized;
+  llvm::DenseMap<PDLValue *, std::pair<PDLValue *, PDLValue *>> results;
+
+public:
+  explicit PDLAnalyzer(PDLContext &ctx)
+      : ctx(ctx), canonicalized(), results() {}
+
+public:
+  PDLContext &getContext() const { return ctx; }
+  int compare(PDLValue *lhs, PDLValue *rhs);
+  const std::pair<PDLValue *, PDLValue *> &getRange(PDLValue *value);
+  const std::pair<PDLValue *, PDLValue *> &getWidthRange(PDLValue *value);
+
+private:
+  // enum CanonicalStatus { Canonical, Noncanonical, Unknown };
+  // CanonicalStatus getCanonicalStatus(PDLValue *value, PDLValue *&canonicalValue) const;
+  PDLValue *canonicalize(PDLValue *value);
+}; // class SemanticInfo
 
 } // namespace tblgen
 } // namespace clang

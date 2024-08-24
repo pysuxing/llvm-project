@@ -145,13 +145,12 @@ class PrecisionTypeDef<string n, list<NamedValue> params = []> {
   string description = [{}];
   // Type parameters
   list<NamedValue> parameters = params;
-  // The bitwidth of the type's binary representation. For non-parametric types,
-  // simply set bitwidth = (val n), in which n is the type's fixed bitwidth. 
-  // For parametric types, the bitwidth is usually derived from the type parameters,
-  // e.g., for IEEE floating point type of s bytes, width = (ishl s, 3)
+  // The bit-width of the type's binary representation. For non-parametric types,
+  // it is a literal value, e.g., Literal<32> for IEEE single. For parametric types,
+  // the bitwidth can be a NamedValue, e.g, def BitWidth : NamedValue<IntType, "bitsize">.
   Value bitsize = ?;
   // The size (in bytes), defaulted to (bitwidth+7) / 8
-  Value size = ishr<add<bitsize, Literal<7>>, Literal<3>>;
+  Value size = ishr<add<bitsize, _7>, _3>;
   // The alignment (in bytes), defaulted to size. Should be a power of 2.
   Value alignment = size;
   //   

@@ -70,25 +70,31 @@ class Literal<int v> : Value<IntType> {
   int value = v;
 }
 
-def _0 : Literal<0>;
-def _1 : Literal<1>;
+// Integer literals 0-64 are predefined
+foreach i = 0 ... 64 in {
+  def _#i : Literal<i>;
+}
 
-class NamedValue<Type ty, string n, string abbr = ""> : Value<ty> {
+class NamedValue<Type ty, string n, string abbr = "", bit isDynamic = false> : Value<ty> {
   string name = n;
   string abbreviation = abbr;
+  bit dynamic = isDynamic;
 }
 
 // Predefined named values. These values are merely used to define 
 // encoders, decoers and rounder for custom precision types, see PrecisionBase.td.
+// All predefined named values starts with two underscores "__", which is
+// reserved for predefined named values. User-defined named values should avoid
+// this prefix.
 //
 // __binary       - Binary representation of a custom precision value
 // __sign         - Sign in the scientifc notation triple (sign, exponent, significants)
 // __exponent     - Exponent in the scientifc notation triple (sign, exponent, significants)
 // __significants - Significants in the scientifc notation triple (sign, exponent, significants)
-def __binary : NamedValue<BinType, "binary">;
-def __sign : NamedValue<IntType, "sign">;
-def __exponent : NamedValue<IntType, "exponent">;
-def __significants : NamedValue<BinType, "significants">;
+def __binary : NamedValue<BinType, "binary", "", true>;
+def __sign : NamedValue<IntType, "sign", "", true>;
+def __exponent : NamedValue<IntType, "exponent", "", true>;
+def __significants : NamedValue<BinType, "significants", "", true>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -134,7 +140,7 @@ class zeros<Value n> : UnaryOperator<BinType, IntType, n>;
 //
 // none - true if all bits are 0
 // all  - true if all bits are 1
-// any  - true if not all bits are 0
+// any  - true if 1 or more bits are 1
 class none<Value bs> : UnaryOperator<IntType, BinType, bs>;
 class all<Value bs> : UnaryOperator<IntType, BinType, bs>;
 class any<Value bs> : UnaryOperator<IntType, BinType, bs>;
