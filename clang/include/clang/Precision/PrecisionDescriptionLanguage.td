@@ -30,8 +30,7 @@
 // IntType is used to represent number of bits (lenth of BinType) or boolean value.
 // The IntType is signed, so negtive values can be represented.
 //
-// BinType values can implicitly cast to IntType, but not vice versa. Note that
-// BinType values are zero-extended during convertion to IntType values.
+// BinType values and IntType values can be explictly converted to each other.
 // 
 //===----------------------------------------------------------------------===//
 
@@ -70,31 +69,41 @@ class Literal<int v> : Value<IntType> {
   int value = v;
 }
 
-// Integer literals 0-64 are predefined
-foreach i = 0 ... 64 in {
+// Integer literals 0-128 are predefined
+// NOTE sync this with 'SmallIntegerLimit' in PrecisionDescriptionLanguage.h
+foreach i = 0 ... 128 in {
   def _#i : Literal<i>;
 }
 
-class NamedValue<Type ty, string n, string abbr = "", bit isDynamic = false> : Value<ty> {
+class NamedValue<Type ty, string n, string abbr = ""> : Value<ty> {
   string name = n;
   string abbreviation = abbr;
-  bit dynamic = isDynamic;
 }
 
-// Predefined named values. These values are merely used to define 
-// encoders, decoers and rounder for custom precision types, see PrecisionBase.td.
-// All predefined named values starts with two underscores "__", which is
-// reserved for predefined named values. User-defined named values should avoid
+// Predefined named values. All predefined named values starts with two underscores "__",
+// which is reserved for predefined named values. User-defined named values should avoid
 // this prefix.
 //
+// The four predefined values below are merely used to define encoders, decoers and rounders
+// for custom precision types, see PrecisionBase.td.
 // __binary       - Binary representation of a custom precision value
 // __sign         - Sign in the scientifc notation triple (sign, exponent, significants)
 // __exponent     - Exponent in the scientifc notation triple (sign, exponent, significants)
 // __significants - Significants in the scientifc notation triple (sign, exponent, significants)
-def __binary : NamedValue<BinType, "binary", "", true>;
-def __sign : NamedValue<IntType, "sign", "", true>;
-def __exponent : NamedValue<IntType, "exponent", "", true>;
-def __significants : NamedValue<BinType, "significants", "", true>;
+def __binary : NamedValue<BinType, "binary", "">;
+def __sign : NamedValue<IntType, "sign", "">;
+def __exponent : NamedValue<IntType, "exponent", "">;
+def __significants : NamedValue<BinType, "significants", "">;
+// The four predefined values below are meant to be used as type parameters in parametric
+// precision types.
+// __width        - Bit-width of a custom precision type
+// __size         - Size (in bytes) of a custom precision type
+// __expwidth     - Bit-width of the exponent field
+// __fracwidth    - Bit-width of the fraction field
+def __width : NamedValue<IntType, "Width", "n">;
+def __size : NamedValue<IntType, "Size", "s">;
+def __expwidth : NamedValue<IntType, "ExponentWidth", "es">;
+def __fracwidth : NamedValue<IntType, "FractionWidth", "fs">;
 
 //===----------------------------------------------------------------------===//
 //
@@ -119,15 +128,29 @@ class Operator<Type ty, list<Type> paramTypes, list<Value> args> : Value<ty> {
   list<Type> parametersTypes = paramTypes;
   // Argument values
   list<Value> arguments = args;
-  // True if the operator is variadic
-  // bit variadic = false;
-  // Verification code
-  code verifier = [{}];
 }
 class UnaryOperator<Type ty, Type paramType, Value arg>
-  : Operator<ty, [paramType], [arg]>;
+  : Operator<ty, [paramType], [arg]> {
+  assert !eq(paramType, arg.type), "Invalid argument " # !repr(arg);
+}
 class BinaryOperator<Type ty, Type lhsType, Type rhsType, Value lhsValue, Value rhsValue>
-  : Operator<ty, [lhsType, rhsType], [lhsValue, rhsValue]>;
+  : Operator<ty, [lhsType, rhsType], [lhsValue, rhsValue]> {
+  assert !eq(lhsType, lhsValue.type), "Invalid argument " # !repr(lhsValue);
+  assert !eq(rhsType, rhsValue.type), "Invalid argument " # !repr(rhsValue);
+}
+class TernaryOperator<Type ty, Type ty0, Type ty1, Type ty2, Value arg0, Value arg1, Value arg2>
+  : Operator<ty, [ty0, ty1, ty2], [arg0, arg1, arg2]> {
+  assert !eq(ty0, arg0.type), "Invalid argument type";
+  assert !eq(ty1, arg1.type), "Invalid argument type";
+  assert !eq(ty2, arg2.type), "Invalid argument type";
+}
+
+// Conversion operations
+//
+// btoi - convert binary to integer
+// itob - convert integer to binary
+class btoi<Value b> : UnaryOperator<IntType, BinType, b>;
+class itob<Value i> : UnaryOperator<BinType, IntType, i>;
 
 // Constant operations
 //
@@ -153,21 +176,21 @@ class any<Value bs> : UnaryOperator<IntType, BinType, bs>;
 // takeh  - extract the highest n bits
 // dropl  - drop the lowest n bits and return the remained bits
 // droph  - drop the highest n bits and return the remained bits
-// bshl   - left shift the bits, keeping the bit length unchanged
-// rshl   - left shift the bits, keeping the bit length unchanged
+// shl    - left shift the bits, keeping the bit length unchanged
+// shr    - right shift the bits, keeping the bit length unchanged
 // lext0  - left extend a 0-bit to the given binary
 // rext0  - right extend a 0-bit to the given binary
 // lext1  - left extend a 1-bit to the given binary
 // rext1  - right extend a 1-bit to the given binary
 // concat - concatenate two binary, e.g. (concat 0b01, 0b11) returns 0b0111
-class msb<Value bs> : UnaryOperator<BinType, BinType, bs>;
-class lsb<Value bs> : UnaryOperator<BinType, BinType, bs>;
+class msb<Value bs> : UnaryOperator<IntType, BinType, bs>;
+class lsb<Value bs> : UnaryOperator<IntType, BinType, bs>;
 class takel<Value bs, Value n> : BinaryOperator<BinType, BinType, IntType, bs, n>;
 class takeh<Value bs, Value n> : BinaryOperator<BinType, BinType, IntType, bs, n>;
 class dropl<Value bs, Value n> : BinaryOperator<BinType, BinType, IntType, bs, n>;
 class droph<Value bs, Value n> : BinaryOperator<BinType, BinType, IntType, bs, n>;
-class bshl<Value bs, Value shift> : BinaryOperator<BinType, BinType, IntType, bs, shift>;
-class bshr<Value bs, Value shift> : BinaryOperator<BinType, BinType, IntType, bs, shift>;
+class shl<Value bs, Value shift> : BinaryOperator<BinType, BinType, IntType, bs, shift>;
+class shr<Value bs, Value shift> : BinaryOperator<BinType, BinType, IntType, bs, shift>;
 class lext0<Value bs> : UnaryOperator<BinType, BinType, bs>;
 class rext0<Value bs> : UnaryOperator<BinType, BinType, bs>;
 class lext1<Value bs> : UnaryOperator<BinType, BinType, bs>;
@@ -193,12 +216,14 @@ class ctb<Value bs, Value b> : BinaryOperator<IntType, BinType, BinType, bs, b>;
 //
 // add  - addition
 // sub  - subtraction
-// ishl - left shift
-// ishr - right shift (signed)
+// neg  - negation
+// pow2 - power of 2, i.e., pow2(e) = (1 << e)
+// scl2 - scale by a power of 2, i.e., scl2(v, f) = (v << f), in which 'f' must be a literal, and can be negtive
 class add<Value lhs, Value rhs> : BinaryOperator<IntType, IntType, IntType, lhs, rhs>;
 class sub<Value lhs, Value rhs> : BinaryOperator<IntType, IntType, IntType, lhs, rhs>;
-class ishl<Value value, Value shift> : BinaryOperator<IntType, IntType, IntType, value, shift>;
-class ishr<Value value, Value shift> : BinaryOperator<IntType, IntType, IntType, value, shift>;
+class neg<Value v> : UnaryOperator<IntType, IntType, v>;
+class pow2<Value e> : UnaryOperator<IntType, IntType, e>;
+class scl2<Value v, Value f> : BinaryOperator<IntType, IntType, IntType, v, f>;
 
 // Comparison operators
 // 
@@ -219,17 +244,14 @@ class ge<Value lhs, Value rhs> : BinaryOperator<IntType, IntType, IntType, lhs, 
 // not - logical not
 // and - logical and
 // or  - logical or
-class not<Value value> : UnaryOperator<IntType, IntType, value>;
+class not<Value v> : UnaryOperator<IntType, IntType, v>;
 class and<Value lhs, Value rhs> : BinaryOperator<IntType, IntType, IntType, lhs, rhs>;
 class or<Value lhs, Value rhs>  : BinaryOperator<IntType, IntType, IntType, lhs, rhs>;
 
 // Conditional operator
 // (cond b, t, f) behaves the same as the C tenary operator (b? t : f)
-class cond<Value b, Value t, Value f> : Operator<IntType, [IntType, IntType, IntType], [b, t, f]>;
-
-// Identity operator
-// The identity operator maps the input value to itself. It is used
-// to transform a Value to dag to comply with the TableGen syntax rules.
-// def val : Operator<Type, [Type]>;
+class cond<Value b, Value t, Value f> : TernaryOperator<t.type, IntType, t.type, f.type, b, t, f> {
+  assert !eq(t.type, f.type), "Types of t and f do not match";
+}
 
 #endif // LLVM_CLANG_PRECISION_PRECISIONDESCRIPTIONLANGUAGE

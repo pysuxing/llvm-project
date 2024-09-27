@@ -24,6 +24,7 @@ add_tablegen(clang-tblgen CLANG
   RISCVVEmitter.cpp
   SveEmitter.cpp
   PrecisionEmitter.cpp
+  PrecisionDescriptionLanguage.cpp
   TableGen.cpp
   )
 

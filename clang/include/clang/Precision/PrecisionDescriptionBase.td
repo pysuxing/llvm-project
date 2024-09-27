@@ -113,8 +113,8 @@ class Encoder<list<Value> params = []> {
 }
 
 // The Rounder describes how many significants can be encoded into the binary representation.
-// This is needed because for some type formats, the number of significants is value-dependent.
-// 
+// This is needed because for some type formats, the number of significants is value-dependent,
+// e.g.,
 // (1) For IEEE floating point types, subnormal numbers has fewer significants than normal numbers.
 // (2) For Posit types, values around +1/-1 has longer fraction field than smaller or larger values.
 //
@@ -134,6 +134,39 @@ class Rounder<list<Value> params = []> {
   Value precision = ?;
 }
 
+// The Property class describes static properties of the type. A property is considered
+// static if it is value-independent.
+class Property<list<Value> params = []> {
+  list<Value> parameters = params;
+  // [IntType] The bit-width of the type's binary representation. For non-parametric types,
+  // it is a literal value, e.g., Literal<32> for IEEE single. For parametric types,
+  // it must be the named value '__width'.
+  Value width = ?;
+  // [IntType] The maximum number of significants, including any implicit bits. This differs
+  // to Rounder.precision that Rounder.precision is a value-dependent function dependent on
+  // __sign, __exponent and __significants.
+  Value precision = ?
+  // [IntType] The minimum positive value this type can represent, in the form of
+  // minpos = minsig * 2^minexp
+  Value minsig = ?;
+  Value minexp = ?;
+  // [IntType] The maximum positive value this type can represent, in the form of
+  // maxpos = maxsig * 2^maxexp
+  Value maxsig = ?;
+  Value maxexp = ?;
+
+  // We do not define negtive counterparts of minpos/maxpos, and considers the following
+  // equations to be valid,
+  //   minneg = -maxpos
+  //   maxneg = -minpos
+  // that is, we only support types whose reprentation range is symmetry about 0.
+
+  // The size (in bytes), defaulted to (width+7) / 8
+  // Value size = ?;
+  // The alignment (in bytes), defaulted to size. Should be a power of 2.
+  // Value alignment = size;
+}
+
 class PrecisionTypeDef<string n, list<NamedValue> params = []> {
   // Name of the type, generally in title case, e.g., "MyFloat"
   string name = n;
@@ -145,18 +178,13 @@ class PrecisionTypeDef<string n, list<NamedValue> params = []> {
   string description = [{}];
   // Type parameters
   list<NamedValue> parameters = params;
-  // The bit-width of the type's binary representation. For non-parametric types,
-  // it is a literal value, e.g., Literal<32> for IEEE single. For parametric types,
-  // the bitwidth can be a NamedValue, e.g, def BitWidth : NamedValue<IntType, "bitsize">.
-  Value bitsize = ?;
-  // The size (in bytes), defaulted to (bitwidth+7) / 8
-  Value size = ishr<add<bitsize, _7>, _3>;
-  // The alignment (in bytes), defaulted to size. Should be a power of 2.
-  Value alignment = size;
-  //   
+  // The decoder, encoder, rounder and property, see above
   Decoder decoder = ?;
   Encoder encoder = ?;
   Rounder rounder = ?;
+  Property property = ?;
+  // Assertions on 'width', 'size', 'alignment', and 'parameters'
+  list<Value> assertions = [];
 
   // see CXXNameMangler::mangleType(const BuiltinType *T) in ItaniumMangle.cpp
   string cppManglePrefix = ?;

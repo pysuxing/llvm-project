@@ -17,7 +17,7 @@
 include "clang/Precision/PrecisionDescriptionBase.td"
 
 class IEEEFloatingPointDecoder<Value width, Value es> : Decoder<[width, es]> {
-  defvar bias = ishr<sub<ishl<_1, es>, _1>, _1>;
+  defvar bias = sub<pow2<sub<es, _1>>, _1>;
   defvar mantissa = droph<__binary, add<es, _1>>;
   defvar biasedexponent = takeh<droph<__binary, _1>, es>;
   let sign = msb<__binary>;
@@ -30,24 +30,24 @@ class IEEEFloatingPointDecoder<Value width, Value es> : Decoder<[width, es]> {
   let nan = and<all<biasedexponent>, any<mantissa>>;
   let quietnan = and<all<biasedexponent>, msb<mantissa>>;
   let signalnan = and<and<all<biasedexponent>, not<msb<mantissa>>>, any<droph<mantissa, _1>>>;
-  defvar unbiasedexponent = sub<biasedexponent, bias>;
+  defvar unbiasedexponent = sub<btoi<biasedexponent>, bias>;
   defvar subnormal = none<biasedexponent>;
   defvar numleadingzeros = clz<mantissa>;
-  let significants = cond<subnormal, bshl<rext1<mantissa>, add<numleadingzeros, _1>>, lext1<mantissa>>;
+  let significants = cond<subnormal, droph<mantissa, numleadingzeros>, lext1<mantissa>>;
   let exponent = cond<subnormal, sub<unbiasedexponent, numleadingzeros>, unbiasedexponent>;
 }
 
 class IEEEFloatingPointEncoder<Value width, Value es> : Encoder<[width, es]> {
-  defvar bias = ishr<sub<ishl<_1, es>, _1>, _1>;
+  defvar bias = sub<pow2<sub<es, _1>>, _1>;
   defvar subnormalexponent = sub<_1, bias>;
   defvar normalexponent = add<__exponent, bias>;
   defvar subnormalshift = sub<_1, normalexponent>;
-  defvar subnormalmantissa = bshr<dropl<__significants, _1>, subnormalshift>;
+  defvar subnormalmantissa = shr<dropl<__significants, _1>, subnormalshift>;
   defvar normalmantissa = droph<__significants, _1>;
   defvar subnormal = le<normalexponent, _0>;
-  defvar biasedexponent = cond<subnormal, subnormalexponent, normalexponent>;
+  defvar biasedexponent = itob<cond<subnormal, subnormalexponent, normalexponent>>;
   defvar mantissa = cond<subnormal, subnormalmantissa, normalmantissa>;
-  let binary = concat<__sign, concat<biasedexponent, mantissa>>;
+  let binary = concat<itob<__sign>, concat<biasedexponent, mantissa>>;
 
   defvar fs = sub<width, add<es, _1>>;
   let poszero = zeros<width>;
@@ -63,31 +63,33 @@ class IEEEFloatingPointEncoder<Value width, Value es> : Encoder<[width, es]> {
 
 class IEEEFloatingPointRounder<Value width, Value es> : Rounder<[width, es]> {
   defvar fs = sub<width, add<es, _1>>;
-  defvar bias = ishr<sub<ishl<_1, es>, _1>, _1>;
+  defvar bias = sub<pow2<sub<es, _1>>, _1>;
   defvar normalexponent = add<__exponent, bias>;
   defvar subnormal = le<normalexponent, _0>;
   let precision = cond<subnormal, add<fs, normalexponent>, add<fs, _1>>;
 }
 
-// def PositType : PrecisionTypeDef<"Posit", [Width, ExpSize]> {
-//   let width = (val Width);
-// }
+class IEEEFloatingPointProperty<Value w, Value es> : Property<[w, es]> {
+  let width = w;
+  let precision = sub<width, es>;
+  let maxsig = ones<precision>;
+  let maxexp = sub<pow2<sub<es, _1>>, _2>;
+  let minsig = ones<_1>;
+  let minexp = sub<neg<maxexp>, sub<precision, _1>>;
+}
 
-// Bitwidth of the binary representation
-def BitSize : NamedValue<IntType, "BitSize", "n">;
-// Bitwidth of the exponent field in the binary representation
-def ExponentSize : NamedValue<IntType, "ExponentSize", "es">;
-
-def IEEEFloatingPointType : PrecisionTypeDef<"FloatingPoint", [BitSize, ExponentSize]> {
+def IEEEFloatingPointType : PrecisionTypeDef<"FloatingPoint", [__width, __expwidth]> {
   let keyword = "ieeefp";
   let mnemonic = "ieeefp";
-  let bitsize = BitSize;
-  let decoder = IEEEFloatingPointDecoder<BitSize, ExponentSize>;
-  let encoder = IEEEFloatingPointEncoder<BitSize, ExponentSize>;
-  let rounder = IEEEFloatingPointRounder<BitSize, ExponentSize>;
-  // let extraASTTypeDecls = [{
-  //   unsigned int getFractionSize() const { return getWidth() - 1 - getExpSize(); }
-  // }];
+  let decoder = IEEEFloatingPointDecoder<__width, __expwidth>;
+  let encoder = IEEEFloatingPointEncoder<__width, __expwidth>;
+  let rounder = IEEEFloatingPointRounder<__width, __expwidth>;
+  let property = IEEEFloatingPointProperty<__width, __expwidth>;
+  let assertions = [
+    gt<__expwidth, _1>,
+    lt<add<__expwidth, _1>, __width>,
+    le<__width, __128>
+  ];
 }
 
 #endif // LLVM_CLANG_PRECISION_PRECISIONDESCRIPTION

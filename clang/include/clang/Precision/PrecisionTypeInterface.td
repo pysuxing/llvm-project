@@ -21,46 +21,64 @@ def PrecisionTypeInterface : TypeInterface<"PrecisionTypeInterface"> {
     InterfaceMethod<[{
         Returns the bit width of this type.
       }],
-      /*retTy=*/"int",
-      /*methodName=*/"getBitWidth",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getWidth",
       /*args=*/(ins),
       /*methodBody=*/[{}],
       /*defaultImplementation=*/[{}]
     >,
+    // InterfaceMethod<[{
+    //     Return if the precision of this type is value-independent.
+    //   }],
+    //   /*retTy=*/"bool",
+    //   /*methodName=*/"getValueIndependentPrecision",
+    //   /*args=*/(ins),
+    //   /*methodBody=*/"",
+    //   /*defaultImplementation=*/[{}]
+    // >,
     InterfaceMethod<[{
-        Return the minimum exponent this type can represent.
+        Return the number of significants, including any implicit bit.
+        If getValueIndependentPrecision() returns false, this function
+        should the largest number of significants of all positive values.
       }],
-      /*retTy=*/"int",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getPrecision",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{}]
+    >,
+    InterfaceMethod<[{
+        Return the significants of minpos
+      }],
+      /*retTy=*/"llvm::BitVector",
+      /*methodName=*/"getMinSignificants",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{}]
+    >,
+    InterfaceMethod<[{
+        Return the exponent of minpos
+      }],
+      /*retTy=*/"int64_t",
       /*methodName=*/"getMinExponent",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{}]
     >,
     InterfaceMethod<[{
-        Return the maximum exponent this type can represent.
+        Return the significants of maxpos
       }],
-      /*retTy=*/"int",
+      /*retTy=*/"llvm::BitVector",
+      /*methodName=*/"getMaxSignificants",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{}]
+    >,
+    InterfaceMethod<[{
+        Return the exponent of maxpos
+      }],
+      /*retTy=*/"int64_t",
       /*methodName=*/"getMaxExponent",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{}]
-    >,
-    InterfaceMethod<[{
-        Return if the precision of this type is value-independent.
-      }],
-      /*retTy=*/"bool",
-      /*methodName=*/"getValueIndependentPrecision",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{}]
-    >,
-    InterfaceMethod<[{
-        Return the number of significants, including any implicit bit.
-        If getValueIndependentPrecision() returns false, this function
-        should the largest number of significants of all positive values.
-      }],
-      /*retTy=*/"int",
-      /*methodName=*/"getPrecision",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{}]

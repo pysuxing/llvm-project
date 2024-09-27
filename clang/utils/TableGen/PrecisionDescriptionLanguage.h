@@ -9,13 +9,14 @@
 #ifndef CLANG_UTILS_TABLEGEN_PRECISIONDESCRIPTIONLANGUAGE_H
 #define CLANG_UTILS_TABLEGEN_PRECISIONDESCRIPTIONLANGUAGE_H
 
-#include "clang/AST/Type.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SMLoc.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
 #include <array>
 #include <memory>
@@ -24,33 +25,9 @@
 namespace clang {
 namespace tblgen {
 
-// class PDLType {
-// public:
-//   enum Kind { KInteger, kBinary };
+enum class PDLType { Integer, Binary };
 
-// private:
-//   Kind kind;
-
-// protected:
-//   PDLType(Kind kind) : kind(kind) {}
-
-// public:
-//   Kind getKind() const { return kind; }
-// }; // class PDLType
-
-// class PDLIntegerType : public PDLType {
-// public:
-//   PDLIntegerType() : PDLType(KInteger) {}
-// }; // class PDLIntegerType
-
-// class PDLBinaryType : public PDLType {
-// public:
-//   PDLBinaryType() : PDLType(kBinary) {}
-// }; // class PDLBinaryType
-
-enum class PDLTypeKind { Integer, Binary };
-
-enum class PDLOperatorKind {
+enum class PDLOpKind {
   ones,
   zeros,
   none,
@@ -62,8 +39,8 @@ enum class PDLOperatorKind {
   takeh,
   dropl,
   droph,
-  bshl,
-  bshr,
+  shl,
+  shr,
   lext0,
   rext0,
   lext1,
@@ -77,8 +54,9 @@ enum class PDLOperatorKind {
   ctb,
   add,
   sub,
-  ishl,
-  ishr,
+  neg,
+  pow2,
+  scl2,
   eq,
   ne,
   lt,
@@ -95,70 +73,100 @@ enum class PDLOperatorKind {
 // forward declaration
 class PDLContext;
 
-class PDLValue {
+class alignas(8) PDLValue {
 public:
   enum Kind { Literal, Named, Operator };
 
 protected:
-  llvm::PointerIntPair<PDLContext *, 3, Kind> ctx;
-  union {
-    int value;
-    llvm::Record *record;
-  };
+  llvm::PointerIntPair<PDLContext *, 3, unsigned> ctxinfo;
 
 protected:
-  explicit PDLValue(Kind kind, PDLContext *ctx, llvm::Record *record)
-      : ctx(ctx, kind), record(record) {}
-  explicit PDLValue(PDLContext *ctx, int value)
-      : ctx(ctx, Literal), value(value) {}
+  explicit PDLValue(PDLContext *ctx, PDLType type, Kind kind)
+      : ctxinfo(ctx, composeTypeKind(type, kind)) {}
 
 public:
-  static bool classOf(PDLValue *value) { return true; }
+  static bool classof(const PDLValue *value) { return true; }
 
 public:
-  PDLContext *getContext() const { return ctx.getPointer(); }
-  llvm::Record *getRecord() const { return record; }
-  Kind getKind() const { return ctx.getInt(); }
-  PDLTypeKind getType() const {
-    if (getKind() == Literal)
-      return PDLTypeKind::Integer;
-    if (getKind() == Operator) {
-    }
-    auto *type = getRecord()->getValueAsDef("type");
-    return type->getName() == "IntType" ? PDLTypeKind::Integer
-                                        : PDLTypeKind::Binary;
+  PDLContext *getContext() const { return ctxinfo.getPointer(); }
+  Kind getKind() const { return static_cast<Kind>(ctxinfo.getInt() & 0x03u); }
+  PDLType getType() const {
+    return static_cast<PDLType>((ctxinfo.getInt() >> 2) & 0x01u);
   }
-  // bool operator==(const PDLValue &other) const;
-  // bool operator!=(const PDLValue &other) const { return not operator==(other); }
-  bool isDynamic() const;
+  bool isInteger() const { return getType() == PDLType::Integer; }
+  bool isBinary() const { return getType() == PDLType::Binary; }
+  // bool isDynamic() const;
+
+private:
+  static unsigned composeTypeKind(PDLType type, Kind kind) {
+    return static_cast<unsigned>(type) | (static_cast<unsigned>(kind) << 2);
+  }
 };
 
 class PDLLiteral : public PDLValue {
   friend class PDLContext;
 
+protected:
+  int value;
+
 private:
-  PDLLiteral(PDLContext *ctx, int value) : PDLValue(ctx, value) {}
+  PDLLiteral(PDLContext *ctx, int value)
+      : PDLValue(ctx, PDLType::Integer, Literal), value(value) {}
 
 public:
-  static bool classOf(PDLValue *value) {
+  static bool classof(const PDLValue *value) {
     return value->getKind() == Literal;
   }
 
 public:
-  int getValue() const {
-    return getKind() == Literal ? value : getRecord()->getValueAsInt("value");
+  int getValue() const { return value; }
+};
+
+class PDLRecordValue : public PDLValue {
+  friend class PDLContext;
+
+protected:
+  llvm::PointerIntPair<llvm::Record *, 2, unsigned> record;
+
+protected:
+  PDLRecordValue(PDLContext *ctx, PDLType type, Kind kind, llvm::Record *record)
+      : PDLValue(ctx, type, kind), record(record) {}
+
+public:
+  static bool classof(const PDLValue *value) {
+    return value->getKind() == Named or value->getKind() == Operator;
+  }
+
+public:
+  llvm::Record *getRecord() const { return record.getPointer(); }
+  bool isPredefined() const {
+    assert(getKind() == Named);
+    return record.getInt() & 0x01u;
+  }
+  bool isArtificial() const {
+    assert(getKind() == Operator);
+    return record.getInt() & 0x02u;
+  }
+  void setPredefined() {
+    assert(getKind() == Named);
+    record.setInt(record.getInt() | 0x01u);
+  }
+  void setArtificial() {
+    assert(getKind() == Operator);
+    record.setInt(record.getInt() | 0x02u);
   }
 };
 
-class PDLNamedValue : public PDLValue {
+class PDLNamedValue : public PDLRecordValue {
   friend class PDLContext;
 
 private:
-  PDLNamedValue(PDLContext *ctx, llvm::Record *record)
-      : PDLValue(Named, ctx, record) {}
+  PDLNamedValue(PDLContext *ctx, llvm::Record *record, bool predefined = false);
 
 public:
-  static bool classOf(PDLValue *value) { return value->getKind() == Named; }
+  static bool classof(const PDLValue *value) {
+    return value->getKind() == Named;
+  }
 
 public:
   llvm::StringRef getName() const {
@@ -167,38 +175,29 @@ public:
   llvm::StringRef getAbbrivation() const {
     return getRecord()->getValueAsString("abbreviation");
   }
-  bool getDynamic() const { return getRecord()->getValueAsBit("dynamic"); }
-  bool isPredefined() const {
-    return not getRecord()->isAnonymous() and
-           getRecord()->getName().starts_with("__");
-  }
 };
 
-class PDLOperator : public PDLValue {
+class PDLOperator : public PDLRecordValue {
   friend class PDLContext;
 
-private:
-  PDLOperatorKind opkind;
+protected:
+  PDLOpKind opkind;
   llvm::SmallVector<PDLValue *, 3> operands;
 
 private:
   PDLOperator(PDLContext *ctx, llvm::Record *record);
-  PDLOperator(PDLContext *ctx, PDLOperatorKind opkind,
-              llvm::ArrayRef<PDLValue *> operands)
-      : PDLValue(Operator, ctx, nullptr), opkind(opkind),
-        operands(operands.begin(), operands.end()) {}
+  PDLOperator(PDLContext *ctx, PDLOpKind opkind, llvm::ArrayRef<PDLValue *> operands);
 
 public:
-  static bool classOf(PDLValue *value) {
+  static bool classof(const PDLValue *value) {
     return value->getKind() == Operator;
   }
 
 public:
-  bool isArtificial() const { return getRecord() == nullptr; }
-  PDLOperatorKind getOperatorKind() const { return opkind; }
+  PDLOpKind getOperatorKind() const { return opkind; }
   bool isCommutative() const {
-    return opkind == PDLOperatorKind::add or opkind == PDLOperatorKind::land or
-           opkind == PDLOperatorKind::lor;
+    return opkind == PDLOpKind::add or opkind == PDLOpKind::land or
+           opkind == PDLOpKind::lor;
   }
   int getNumOperands() const { return operands.size(); }
   llvm::ArrayRef<PDLValue *> getOperands() const { return operands; }
@@ -210,50 +209,161 @@ public:
 
 class alignas(8) PDLContext {
 private:
-  llvm::DenseMap<llvm::Record *, std::unique_ptr<PDLValue>> values;
   llvm::SmallVector<std::unique_ptr<PDLLiteral>, 0> literals;
-  llvm::SmallVector<std::unique_ptr<PDLOperator>, 0> operators;
-  // predefined named values
-  PDLValue *__binary;
-  PDLValue *__sign;
-  PDLValue *__exponent;
-  PDLValue *__significants;
-  // small integer literals for convinience
-  static constexpr int SmallIntegerLimit = 65;
-  std::array<std::unique_ptr<PDLValue>, SmallIntegerLimit> smallIntegers;
+  llvm::DenseMap<llvm::Record *, std::unique_ptr<PDLValue>> values;
+  llvm::Record *ity;
+  llvm::Record *bty;
+  PDLNamedValue *__binary;
+  PDLNamedValue *__sign;
+  PDLNamedValue *__exponent;
+  PDLNamedValue *__significants;
+  PDLNamedValue *__width;
+  PDLNamedValue *__size;
+  PDLNamedValue *__expwidth;
+  PDLNamedValue *__fracwidth;
+  llvm::Record *operators[static_cast<int>(PDLOpKind::NumOperators)];
 
 public:
-  explicit PDLContext() = default;
-  ~PDLContext() = default;
+  explicit PDLContext(llvm::RecordKeeper &records);
 
 public:
-  // Get a PDLValue, create if not exists.
-  PDLValue *get(llvm::Record *record);
   PDLLiteral *get(int value);
-  PDLOperator *get(PDLOperatorKind opkind, llvm::ArrayRef<PDLValue *> operands);
+  PDLValue *get(llvm::Record *record);
+  PDLOperator *get(PDLOpKind opkind, llvm::ArrayRef<PDLValue *> operands);
+  PDLType getType(llvm::Record *record) const {
+    return record->getValueAsDef("type") == ity ? PDLType::Integer
+                                                : PDLType::Binary;
+  }
+  // void canonicalize(PDLOpKind &opkind, llvm::SmallVectorImpl<PDLValue *>
+  // &operands);
+  bool is__binary(PDLNamedValue *v) const { return v == __binary; }
+  bool is__sign(PDLNamedValue *v) const { return v == __sign; }
+  bool is__exponent(PDLNamedValue *v) const { return v == __exponent; }
+  bool is__significants(PDLNamedValue *v) const { return v == __significants; }
+  bool is__width(PDLNamedValue *v) const { return v == __width; }
+  bool is__size(PDLNamedValue *v) const { return v == __size; }
+  bool is__expwidth(PDLNamedValue *v) const { return v == __expwidth; }
+  bool is__fracwidth(PDLNamedValue *v) const { return v == __fracwidth; }
+  PDLNamedValue *get__binary() const { return __binary; }
+  PDLNamedValue *get__sign() const { return __sign; }
+  PDLNamedValue *get__exponent() const { return __exponent; }
+  PDLNamedValue *get__significants() const { return __significants; }
+  PDLNamedValue *get__width() const { return __width; }
+  PDLNamedValue *get__size() const { return __size; }
+  PDLNamedValue *get__expwidth() const { return __expwidth; }
+  PDLNamedValue *get__fracwidth() const { return __fracwidth; }
+  PDLType getOperatorType(PDLOpKind opkind, llvm::ArrayRef<PDLValue *> operands) const;
+};
+
+class PDLChecker {
+private:
+  PDLContext &ctx;
+  PDLValue *root;
+public:
+  PDLChecker(PDLContext &ctx) : ctx(ctx), root(nullptr) {}
+
+public:
+  void checkDecoder(llvm::Record *decoder);
+private:
+  void check(PDLValue *value, llvm::ArrayRef<PDLValue *> parameters);
+  void check(PDLValue *value, llvm::ArrayRef<PDLOpKind> excludedops);
 };
 
 class PDLAnalyzer {
+public:
+  using Range = std::pair<PDLValue *, PDLValue *>;
 private:
   PDLContext &ctx;
-  llvm::DenseMap<PDLValue *, PDLValue *> canonicalized;
-  llvm::DenseMap<PDLValue *, std::pair<PDLValue *, PDLValue *>> results;
+  llvm::ArrayRef<PDLNamedValue *> parameters;
+  llvm::DenseMap<PDLValue *, Range> ranges;
 
 public:
-  explicit PDLAnalyzer(PDLContext &ctx)
-      : ctx(ctx), canonicalized(), results() {}
+  explicit PDLAnalyzer(PDLContext &ctx,
+                       llvm::ArrayRef<PDLNamedValue *> parameters)
+      : ctx(ctx), parameters(parameters), ranges() {}
 
 public:
-  PDLContext &getContext() const { return ctx; }
-  int compare(PDLValue *lhs, PDLValue *rhs);
-  const std::pair<PDLValue *, PDLValue *> &getRange(PDLValue *value);
-  const std::pair<PDLValue *, PDLValue *> &getWidthRange(PDLValue *value);
+  Range &getRange(PDLValue *value);
+};
+
+class PrecisionType {
+public:
+  struct Decoder {
+    llvm::SmallVector<PDLValue *, 4> parameters;
+    PDLValue *sign;
+    PDLValue *exponent;
+    PDLValue *significants;
+    PDLValue *poszero;
+    PDLValue *negzero;
+    PDLValue *zero;
+    PDLValue *posinf;
+    PDLValue *neginf;
+    PDLValue *inf;
+    PDLValue *signalnan;
+    PDLValue *quietnan;
+    PDLValue *nan;
+  };
+  struct Encoder {
+    llvm::SmallVector<PDLNamedValue *, 4> parameters;
+    PDLValue *binary;
+    PDLValue *poszero;
+    PDLValue *negzero;
+    PDLValue *zero;
+    PDLValue *posinf;
+    PDLValue *neginf;
+    PDLValue *inf;
+    PDLValue *signalnan;
+    PDLValue *quietnan;
+    PDLValue *nan;
+  };
+  struct Rounder {
+    llvm::SmallVector<PDLNamedValue *, 4> parameters;
+    PDLValue *precision;
+  };
 
 private:
-  // enum CanonicalStatus { Canonical, Noncanonical, Unknown };
-  // CanonicalStatus getCanonicalStatus(PDLValue *value, PDLValue *&canonicalValue) const;
-  PDLValue *canonicalize(PDLValue *value);
-}; // class SemanticInfo
+  llvm::Record *record;
+  llvm::SmallVector<PDLNamedValue *, 4> parameters;
+  PDLValue *width;
+  Decoder decoder;
+  Encoder encoder;
+  Rounder rounder;
+
+public:
+  explicit PrecisionType(PDLContext &ctx, llvm::Record *record);
+
+public:
+  llvm::Record *getRecord() const { return record; }
+  PDLContext *getContext() const { return width->getContext(); }
+  llvm::ArrayRef<PDLNamedValue *> getParameters() const { return parameters; }
+  PDLValue *getWidth() const { return width; }
+  const Decoder &getDecoder() const { return decoder; }
+  const Encoder &getEncoder() const { return encoder; }
+  const Rounder &getRounder() const { return rounder; }
+};
+
+class PDLCodeGenerator {
+  using NameType = llvm::SmallString<8>;
+private:
+  PDLContext &ctx;
+  PrecisionType &type;
+  llvm::DenseMap<PDLValue *, NameType> varmap;
+  int varid;
+
+public:
+  explicit PDLCodeGenerator(PDLContext &ctx, PrecisionType &type)
+      : ctx(ctx), type(type), varmap(), varid(0) {}
+
+public:
+  PDLContext *getContext() const { return &ctx; }
+  PrecisionType &getPrecisionType() const { return type; }
+
+private:
+  NameType genMaxIntOrBinWidth(PDLValue *value,
+                               llvm::ArrayRef<PDLNamedValue *> parameters,
+                               llvm::raw_ostream &os, unsigned indent);
+  NameType varname(PDLValue *value);
+};
 
 } // namespace tblgen
 } // namespace clang
