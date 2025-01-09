@@ -1800,4 +1800,22 @@ def ext_hlsl_access_specifiers : ExtWarn<
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
 
+// Pragma precision support.
+def err_pragma_precision_expect_eod : Error<"expected end-of-directive">;
+def err_pragma_precision_expect_lparen : Error<"expected '('">;
+def err_pragma_precision_expect_rparen : Error<"expected ')'">;
+def err_pragma_precision_expect_tokenkind : Error<"expected %0">;
+def err_pragma_precision_expect_command : Error<
+  "expected precision command; supported commands are 'region', 'range', 'abserror', and 'relerror'">;
+def err_pragma_precision_expect_identifier : Error<
+  "expected variable name">;
+def err_pragma_precision_expect_numerical : Error<
+  "expected numerical constant">;
+def err_pragma_precision_expect_single_var_range : Error<
+  "expected single range set for variable '%0' in precision range specification">;
+def err_pragma_precision_expect_single_global_range : Error<
+  "expected single global set in precision range specification">;
+def err_pragma_precision_expect_multiple_types : Error<
+  "expected multiple types">;
+
 } // end of Parser diagnostics

@@ -221,6 +221,7 @@ class Parser : public CodeCompletionHandler {
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
+  std::unique_ptr<PragmaHandler> PrecisionPragmaHandler;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -2213,7 +2214,9 @@ private:
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs);
-
+  StmtResult ParsePragmaPrecision(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                                  SourceLocation *TrailingElseLoc,
+                                  ParsedAttributes &Attrs);
   /// Describes the behavior that should be taken for an __if_exists
   /// block.
   enum IfExistsBehavior {

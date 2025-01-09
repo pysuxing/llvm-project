@@ -619,6 +619,36 @@ static Attr *handleHLSLLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) HLSLLoopHintAttr(S.Context, A, UnrollFactor);
 }
 
+static Attr *handlePrecisionRegionAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                       SourceRange Range) {
+  return PrecisionRegionAttr::CreateImplicit(S.Context, A);
+}
+
+static Attr *handlePrecisionRangeAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                      SourceRange Range) {
+  IdentifierInfo *Var = A.getArgAsIdent(0)->Ident;
+  unsigned FirstTypeIndex = 0;
+  if (Var->isKeyword(S.LangOpts)) {
+    Var = nullptr;
+    FirstTypeIndex = 1;
+  }
+  SmallVector<IdentifierInfo *> Types;
+  auto NumArgs = A.getNumArgs();
+  for (unsigned I = FirstTypeIndex; I < NumArgs; ++I)
+    Types.push_back(A.getArgAsIdent(I)->Ident);
+  return PrecisionRangeAttr::CreateImplicit(S.Context, Var, Types.data(), Types.size(), A);
+}
+
+static Attr *handlePrecisionErrorAttr(Sema &S, Stmt *St, const ParsedAttr &A,
+                                      SourceRange Range) {
+  IdentifierInfo *Var = A.getArgAsIdent(0)->Ident;
+  Expr *Bound = A.getArgAsExpr(1);
+  bool IsAbs = A.getKind() == ParsedAttr::AT_PrecisionAbsoluteError;
+  if (IsAbs)
+    return PrecisionAbsoluteErrorAttr::CreateImplicit(S.Context, Var, Bound, A);
+  return PrecisionRelativeErrorAttr::CreateImplicit(S.Context, Var, Bound, A);
+}
+
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   if (A.isInvalid() || A.getKind() == ParsedAttr::IgnoredAttribute)
@@ -677,6 +707,13 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleNoConvergentAttr(S, St, A, Range);
   case ParsedAttr::AT_Annotate:
     return S.CreateAnnotationAttr(A);
+  case ParsedAttr::AT_PrecisionRegion:
+    return handlePrecisionRegionAttr(S, St, A, Range);
+  case ParsedAttr::AT_PrecisionRange:
+    return handlePrecisionRangeAttr(S, St, A, Range);
+  case ParsedAttr::AT_PrecisionAbsoluteError:
+  case ParsedAttr::AT_PrecisionRelativeError:
+    return handlePrecisionErrorAttr(S, St, A, Range);
   default:
     if (Attr *AT = nullptr; A.getInfo().handleStmtAttribute(S, St, A, AT) !=
                             ParsedAttrInfo::NotHandled) {
