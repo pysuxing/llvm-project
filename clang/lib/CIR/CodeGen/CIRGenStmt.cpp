@@ -16,9 +16,11 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Basic/AttrKinds.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -339,6 +341,7 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &S) {
 
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &S) {
+  bool HasPrecisionAttributes = false;
   for (const auto *A : S.getAttrs()) {
     switch (A->getKind()) {
     case attr::NoMerge:
@@ -356,12 +359,25 @@ CIRGenFunction::emitAttributedStmt(const AttributedStmt &S) {
       }
       break;
     }
+    case attr::PrecisionRegion:
+    case attr::PrecisionRange:
+    case attr::PrecisionAbsoluteError:
+    case attr::PrecisionRelativeError:
+      llvm::dbgs() << "== " << A->getSpelling() << '\n';
+      HasPrecisionAttributes = true;
+      break;
     default:
       break;
     }
   }
 
-  return emitStmt(S.getSubStmt(), true, S.getAttrs());
+  if (emitStmt(S.getSubStmt(), true, S.getAttrs()).failed())
+    return llvm::failure();
+  if (HasPrecisionAttributes) {
+    // auto pos = cast<cir::ScopeOp>(std::prev(builder.getInsertionPoint()));
+    llvm::dbgs() << std::prev(builder.getInsertionPoint())->getName() << '\n';
+  }
+  return llvm::success();
 }
 
 // Add terminating yield on body regions (loops, ...) in case there are
