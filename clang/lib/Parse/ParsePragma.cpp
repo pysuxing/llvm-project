@@ -21,6 +21,7 @@
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/PrecisionLab/PragmaPrecision.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
@@ -237,6 +238,12 @@ private:
 
 struct PragmaLoopHintHandler : public PragmaHandler {
   PragmaLoopHintHandler() : PragmaHandler("loop") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
+struct PragmaPrecisionHandler : public PragmaHandler {
+  explicit PragmaPrecisionHandler() : PragmaHandler("precision") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
 };
@@ -509,6 +516,9 @@ void Parser::initializePragmaHandlers() {
   MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
   PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
 
+  PrecisionPragmaHandler = std::make_unique<PragmaPrecisionHandler>();
+  PP.AddPragmaHandler(PrecisionPragmaHandler.get());
+
   if (getTargetInfo().getTriple().isRISCV()) {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
@@ -639,6 +649,9 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
+
+  PP.RemovePragmaHandler(PrecisionPragmaHandler.get());
+  PrecisionPragmaHandler.reset();
 
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
@@ -4060,4 +4073,149 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.DeclareRISCVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
     Actions.DeclareRISCVSiFiveVectorBuiltins = true;
+}
+
+static bool ParseCommaSeperatedTokenList(Preprocessor &PP, Token &Tok,
+                                         SmallVectorImpl<Token> &Tokens,
+                                         llvm::function_ref<bool(tok::TokenKind)> Predicate,
+                                         StringRef ExpectedTokenKind) {
+  do {
+    PP.Lex(Tok);
+    if (not Predicate(Tok.getKind())) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind)
+          << ExpectedTokenKind;
+      return true;
+    }
+    Tokens.push_back(Tok);
+    PP.Lex(Tok);
+  } while (Tok.is(tok::comma));
+  return false;
+}
+
+// PLABFIXME we use Token::isAnyIdentifier(), but do not know
+// the difference between 'raw_identifier' and 'identifier'
+static bool ParsePrecisionInfo(Preprocessor &PP, Token &Tok,
+                               PragmaPrecision &Info) {
+  assert(Tok.is(tok::identifier) and
+         Tok.getIdentifierInfo()->getName() == "precision");
+  Info.Pragma = Tok;
+  PP.Lex(Tok);
+  auto Command = PragmaPrecision::kInvalid;
+  if (not Tok.isAnyIdentifier() or
+      (Command = PragmaPrecision::parseCommand(Tok.getIdentifierInfo()->getName())) ==
+          PragmaPrecision::kInvalid) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_command);
+    return true;
+  }
+  Info.Command = Tok;
+  if (Command == PragmaPrecision::kRegion) {
+    PP.Lex(Tok);
+  } else if (Command == PragmaPrecision::kRange) {
+    // parse all range specs
+    llvm::SmallSet<StringRef, 4> Vars;
+    bool hasGlobalRange = false;
+    do {
+      Info.Segments.push_back(Info.Data.size());
+      PP.Lex(Tok);
+      // A range spec can be global, i.e., no variable is given
+      bool isVariableRange = Tok.isAnyIdentifier();
+      if (isVariableRange) {
+        auto VarName = Tok.getIdentifierInfo()->getName();
+        if (Vars.contains(VarName)) {
+          PP.Diag(Tok.getLocation(),
+                  diag::err_pragma_precision_expect_single_var_range) << VarName;
+          return true;
+        }
+        Info.Data.push_back(Tok);
+        Vars.insert(VarName);
+        PP.Lex(Tok);
+      } else if (hasGlobalRange) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_single_global_range);
+        return true;
+      } else {
+        hasGlobalRange = true;
+      }
+      if (Tok.isNot(tok::l_paren)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_lparen);
+        return true;
+      }
+      auto numTokens = Info.Data.size();
+      if (ParseCommaSeperatedTokenList(PP, Tok, Info.Data, PragmaPrecision::isSupportedType,
+                                              "supported type"))
+        return true;
+      if (Info.Data.size() <= numTokens + 1) {
+        PP.Diag(Tok.getLocation(),
+                diag::err_pragma_precision_expect_multiple_types);
+        return true;
+      }
+      if (Tok.isNot(tok::r_paren)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_rparen);
+        return true;
+      }
+      PP.Lex(Tok);
+    } while (Tok.is(tok::comma));
+    Info.Segments.push_back(Info.Data.size());
+  } else {
+    // Parse all error specs
+    do {
+      Info.Segments.push_back(Info.Data.size());
+      PP.Lex(Tok);
+      if (not Tok.isAnyIdentifier()) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_identifier);
+        return true;
+      }
+      Info.Data.push_back(Tok);
+      PP.Lex(Tok);
+      if (Tok.isNot(tok::l_paren)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_lparen);
+        return true;
+      }
+      PP.Lex(Tok);
+      if (Tok.isNot(tok::numeric_constant)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_tokenkind)
+            << tok::getTokenName(tok::numeric_constant);
+        return true;
+      }
+      Info.Data.push_back(Tok);
+      PP.Lex(Tok);
+      if (Tok.isNot(tok::r_paren)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_rparen);
+        return true;
+      }
+      PP.Lex(Tok);
+    } while (Tok.is(tok::comma));
+    Info.Segments.push_back(Info.Data.size());
+  }
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_precision_expect_eod)
+        << Info.Command.getIdentifierInfo()->getName();
+    return true;
+  }
+  return false;
+}
+
+void PragmaPrecisionHandler::HandlePragma(Preprocessor &PP,
+                                          PragmaIntroducer Introducer,
+                                          Token &Tok) {
+  // Incoming token is "precision" from "#pragma precision ..."
+  assert(Tok.isAnyIdentifier() and
+         Tok.getIdentifierInfo()->getName() == "precision");
+  Token FirstTok = Tok;
+  auto *Info = new (PP.getPreprocessorAllocator()) PragmaPrecision;
+  if (ParsePrecisionInfo(PP, Tok, *Info))
+    return;
+  assert(Tok.is(tok::eod));
+  Token EODTok = Tok;
+
+  Token PrecisionTok;
+  PrecisionTok.startToken();
+  PrecisionTok.setKind(tok::annot_pragma_precision);
+  PrecisionTok.setLocation(FirstTok.getLocation());
+  PrecisionTok.setAnnotationEndLoc(EODTok.getLocation());
+  PrecisionTok.setAnnotationValue(static_cast<void *>(Info));
+
+  auto TokenArray = std::make_unique<Token[]>(1);
+  TokenArray[0] = PrecisionTok;
+  PP.EnterTokenStream(std::move(TokenArray), 1,
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }

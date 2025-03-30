@@ -4199,3 +4199,62 @@ def AvailableOnlyInDefaultEvalMethod : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def PrecisionRegion : StmtAttr {
+  let Spellings = [Pragma<"precision", "region">];
+  let Subjects = SubjectList<[CompoundStmt], ErrorDiag,
+                             "'#pragma precision region' only applies to a compound statement">;
+  let Args = [];
+  let Accessors = [];
+  let AdditionalMembers = [{
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {}
+  }];
+  // PLABFIXME the doc should be defined
+  let Documentation = [Undocumented];
+}
+
+def PrecisionRange : StmtAttr {
+  let Spellings = [Pragma<"precision", "range">];
+  let Args = [IdentifierArgument<"variable", 1>, VariadicIdentifierArgument<"types">];
+  let AdditionalMembers = [{
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+      if (getVariable())
+        OS << getVariable();
+      assert(types_size());
+      OS << '(';
+      llvm::interleaveComma(types(), OS);
+      OS << ')';
+    }
+  }];
+  // PLABFIXME the doc should be defined
+  let Documentation = [Undocumented];
+}
+
+def PrecisionAbsoluteError : StmtAttr {
+  let Spellings = [Pragma<"precision", "abserror">];
+  // let Subjects = SubjectList<[CompoundStmt], ErrorDiag,
+  //                            "'#pragma precision region' only applies to a compound statement">;
+  let Args = [IdentifierArgument<"variable">, ExprArgument<"bound">];
+  let Accessors = [];
+  let AdditionalMembers = [{
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+      OS << getVariable() << '(' << getBound() << ')';
+    }
+  }];
+  // PLABFIXME the doc should be defined
+  let Documentation = [Undocumented];
+}
+
+def PrecisionRelativeError : StmtAttr {
+  let Spellings = [Pragma<"precision", "relerror">];
+  // let Subjects = SubjectList<[CompoundStmt], ErrorDiag,
+  //                            "'#pragma precision region' only applies to a compound statement">;
+  let Args = [IdentifierArgument<"variable">, ExprArgument<"bound">];
+  let Accessors = [];
+  let AdditionalMembers = [{
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
+      OS << getVariable() << '(' << getBound() << ')';
+    }
+  }];
+  // PLABFIXME the doc should be defined
+  let Documentation = [Undocumented];
+}

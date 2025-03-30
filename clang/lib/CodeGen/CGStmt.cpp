@@ -700,16 +700,59 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitStmt(S.getSubStmt());
 }
 
+static void emitPrecisionRange(CGBuilderTy &Builder, const PrecisionRangeAttr *attr) {
+  auto &Ctx = Builder.getContext();
+  auto MDStrBuilder = [&Ctx](IdentifierInfo *ID) {
+    return llvm::MDString::get(Ctx, ID->getName());
+  };
+  llvm::SmallVector<llvm::Metadata *> ArgStrings;
+  auto *Var = attr->getVariable();
+  if (Var)
+    ArgStrings.push_back(MDStrBuilder(Var));
+  for (auto *Type : attr->types())
+    ArgStrings.push_back(MDStrBuilder(Type));
+  auto *Arg = llvm::MetadataAsValue::get(Ctx, llvm::MDNode::get(Ctx, ArgStrings));
+  Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_range, Arg);
+}
+static void emitPrecisionError(CGBuilderTy &Builder, const PrecisionAbsoluteErrorAttr *attr) {
+  auto &Ctx = Builder.getContext();
+  auto MDStrBuilder = [&Ctx](IdentifierInfo *ID) {
+    return llvm::MDString::get(Ctx, ID->getName());
+  };
+  llvm::SmallVector<llvm::Metadata *> ArgStrings;
+  ArgStrings.push_back(MDStrBuilder(attr->getVariable()));
+  auto Bound =
+      cast<FloatingLiteral>(attr->getBound())->getValue().convertToDouble();
+  ArgStrings.push_back(llvm::MDString::get(Ctx, std::to_string(Bound)));
+  auto *Arg = llvm::MetadataAsValue::get(Ctx, llvm::MDNode::get(Ctx, ArgStrings));
+  Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_error, Arg);
+}
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
   bool noinline = false;
   bool alwaysinline = false;
   const CallExpr *musttail = nullptr;
+  bool hasPrecisionRegion = false;
 
   for (const auto *A : S.getAttrs()) {
     switch (A->getKind()) {
     default:
       break;
+    case attr::PrecisionRegion:
+      assert(not hasPrecisionRegion);
+      Builder.CreateIntrinsic(Builder.getVoidTy(),
+                              llvm::Intrinsic::precision_region_start, {});
+      hasPrecisionRegion = true;
+      break;
+    case attr::PrecisionRange:
+      emitPrecisionRange(Builder, cast<PrecisionRangeAttr>(A));
+      break;
+    case attr::PrecisionAbsoluteError:
+      emitPrecisionError(Builder, cast<PrecisionAbsoluteErrorAttr>(A));
+      break;
+    // case attr::PrecisionRelativeError:
+    //   emitPrecisionError(Builder, cast<PrecisionRelativeErrorAttr>(A));
+    //   break;
     case attr::NoMerge:
       nomerge = true;
       break;
@@ -731,6 +774,8 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   EmitStmt(S.getSubStmt(), S.getAttrs());
+  if (hasPrecisionRegion)
+    Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_region_end, {});
 }
 
 void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {

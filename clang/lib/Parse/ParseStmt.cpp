@@ -18,6 +18,7 @@
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "clang/PrecisionLab/PragmaPrecision.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
@@ -504,6 +505,12 @@ Retry:
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return StmtEmpty();
+
+  case tok::annot_pragma_precision:
+    // PLABFIXME figure out what these do
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    return ParsePragmaPrecision(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs);
   }
 
   // If we reached this code, the statement must end in a semicolon.
@@ -2755,4 +2762,60 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
       Stmts.push_back(R.get());
   }
   Braces.consumeClose();
+}
+
+StmtResult Parser::ParsePragmaPrecision(StmtVector &Stmts,
+                                        ParsedStmtContext StmtCtx,
+                                        SourceLocation *TrailingElseLoc,
+                                        ParsedAttributes &Attrs) {
+  assert(Tok.is(tok::annot_pragma_precision));
+  auto &AstCtx = Actions.Context;
+  auto TokenToIDLoc = [&AstCtx](const Token &Tok) -> IdentifierLoc * {
+    return IdentifierLoc::create(AstCtx, Tok.getLocation(), Tok.getIdentifierInfo());
+  };
+  auto TokenToExpr = [&AstCtx](const Token &Tok) -> Expr * {
+    return FloatingLiteral::Create(
+        AstCtx, llvm::APFloat(std::strtod(Tok.getLiteralData(), nullptr)), true,
+        AstCtx.DoubleTy, Tok.getLocation());
+  };
+  auto *Info = static_cast<PragmaPrecision *>(Tok.getAnnotationValue());
+  Token Command = Info->Command;
+  ParsedAttributes PrecisionAttrs(AttrFactory);
+  if (Command.getIdentifierInfo()->getName() == "region") {
+    PrecisionAttrs.addNew(Command.getIdentifierInfo(), Command.getLocation(),
+                          nullptr, {},
+                          nullptr, 0, ParsedAttr::Form::Pragma());
+  } else if (Command.getIdentifierInfo()->getName() == "range") {
+    for (unsigned i = 0; i+1 < Info->Segments.size(); ++i) {
+      auto Begin = Info->Segments[i], End = Info->Segments[i + 1];
+      auto Tokens = llvm::ArrayRef<Token>(Info->Data).slice(Begin, End - Begin);
+      SmallVector<ArgsUnion> Args;
+      llvm::transform(Tokens, std::back_inserter(Args), TokenToIDLoc);
+      PrecisionAttrs.addNew(Command.getIdentifierInfo(), Command.getLocation(),
+                            nullptr, {},
+                            Args.data(), Args.size(),
+                            ParsedAttr::Form::Pragma());
+    }
+  } else {
+    for (unsigned i = 0; i+1 < Info->Segments.size(); ++i) {
+      auto Begin = Info->Segments[i], End = Info->Segments[i + 1];
+      assert(Begin + 2 == End);
+      SmallVector<ArgsUnion, 2> Args{TokenToIDLoc(Info->Data[Begin]), TokenToExpr(Info->Data[Begin+1])};
+      PrecisionAttrs.addNew(Command.getIdentifierInfo(), Command.getLocation(),
+                            nullptr, {},
+                            Args.data(), Args.size(),
+                            ParsedAttr::Form::Pragma());
+    }
+  }
+  ConsumeAnnotationToken();
+
+  // Get the next statement.
+  MaybeParseCXX11Attributes(Attrs);
+
+  ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
+  StmtResult S = ParseStatementOrDeclarationAfterAttributes(
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs);
+  Attrs.takeAllFrom(PrecisionAttrs);
+
+  return S;
 }
