@@ -4588,6 +4588,8 @@ bool CodeGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor,
   return true;
 }
 
+extern llvm::MDNode *CreateAutoFPMetadata(llvm::LLVMContext &Ctx, const VarDecl &D);
+
 /// GetOrCreateLLVMGlobal - If the specified mangled name is not in the module,
 /// create and return an llvm GlobalVariable with the specified type and address
 /// space. If there is something in the module with the specified name, return
@@ -4661,7 +4663,6 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       getModule(), Ty, false, llvm::GlobalValue::ExternalLinkage, nullptr,
       MangledName, nullptr, llvm::GlobalVariable::NotThreadLocal,
       getContext().getTargetAddressSpace(DAddrSpace));
-
   // If we already created a global with the same mangled name (but different
   // type) before, take its name and remove it from its parent.
   if (Entry) {
@@ -4792,7 +4793,13 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
     return getTargetCodeGenInfo().performAddrSpaceCast(
         *this, GV, DAddrSpace, ExpectedAS, Ty->getPointerTo(TargetAS));
   }
-
+  if (D) {
+    auto Ty = D->getType();
+    if (Ty->isAutoFPType() or (Ty->isArrayType() and cast<ArrayType>(Ty)->getElementType()->isAutoFPType())) {
+      auto &Ctx = getLLVMContext();
+      GV->setMetadata("precision_range", CreateAutoFPMetadata(Ctx, *D));
+    }
+  }
   return GV;
 }
 

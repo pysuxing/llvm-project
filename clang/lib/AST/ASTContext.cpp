@@ -1277,6 +1277,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   // GNU extension, __float128 for IEEE quadruple precision
   InitBuiltinType(Float128Ty,          BuiltinType::Float128);
+  InitBuiltinType(AutoFPTy, BuiltinType::AutoFP);
 
   // __ibm128 for IBM extended precision
   InitBuiltinType(Ibm128Ty, BuiltinType::Ibm128);
@@ -1664,6 +1665,7 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
     else
       return Target->getHalfFormat();
   case BuiltinType::Float:      return Target->getFloatFormat();
+  case BuiltinType::AutoFP:     return Target->getDoubleFormat();
   case BuiltinType::Double:     return Target->getDoubleFormat();
   case BuiltinType::Ibm128:
     return Target->getIbm128Format();
@@ -2142,6 +2144,7 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Width = Target->getFloatWidth();
       Align = Target->getFloatAlign();
       break;
+    case BuiltinType::AutoFP:
     case BuiltinType::Double:
       Width = Target->getDoubleWidth();
       Align = Target->getDoubleAlign();
@@ -7044,6 +7047,7 @@ static FloatingRank getFloatingRank(QualType T) {
   case BuiltinType::Half:       return HalfRank;
   case BuiltinType::Float:      return FloatRank;
   case BuiltinType::Double:     return DoubleRank;
+  case BuiltinType::AutoFP:     return DoubleRank;
   case BuiltinType::LongDouble: return LongDoubleRank;
   case BuiltinType::Float128:   return Float128Rank;
   case BuiltinType::BFloat16:   return BFloat16Rank;
@@ -8036,6 +8040,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::BFloat16:
     case BuiltinType::Float16:
     case BuiltinType::Float128:
+    case BuiltinType::AutoFP:
     case BuiltinType::Ibm128:
     case BuiltinType::Half:
     case BuiltinType::ShortAccum:

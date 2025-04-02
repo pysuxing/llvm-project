@@ -218,6 +218,9 @@ FLOATING_TYPE(BFloat16, BFloat16Ty)
 // '__float128'
 FLOATING_TYPE(Float128, Float128Ty)
 
+// '__autofp'
+FLOATING_TYPE(AutoFP, AutoFPTy)
+
 // '__ibm128'
 FLOATING_TYPE(Ibm128, Ibm128Ty)
 

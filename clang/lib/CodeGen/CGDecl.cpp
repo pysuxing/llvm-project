@@ -36,6 +36,8 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include <optional>
 
@@ -186,6 +188,15 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   }
 }
 
+llvm::MDNode *CreateAutoFPMetadata(llvm::LLVMContext &Ctx, const VarDecl &D) {
+  llvm::SmallVector<llvm::Metadata *> ArgStrings;
+  ArgStrings.push_back(llvm::MDString::get(Ctx, D.getName()));
+  ArgStrings.push_back(llvm::MDString::get(Ctx, "__fp16"));
+  ArgStrings.push_back(llvm::MDString::get(Ctx, "float"));
+  ArgStrings.push_back(llvm::MDString::get(Ctx, "double"));
+  ArgStrings.push_back(llvm::MDString::get(Ctx, "long double"));
+  return llvm::MDNode::get(Ctx, ArgStrings);
+}
 /// EmitVarDecl - This method handles emission of any variable declaration
 /// inside a function, including static vars etc.
 void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
@@ -211,6 +222,12 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
     return EmitStaticVarDecl(D, Linkage);
   }
 
+  auto Ty = D.getType();
+  if (Ty->isAutoFPType() or (Ty->isArrayType() and cast<ArrayType>(Ty)->getElementType()->isAutoFPType())) {
+    auto &Ctx = Builder.getContext();
+    auto *Arg = llvm::MetadataAsValue::get(Ctx, CreateAutoFPMetadata(Ctx, D));
+    Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_range, Arg);
+  }
   if (D.getType().getAddressSpace() == LangAS::opencl_local)
     return CGM.getOpenCLRuntime().EmitWorkGroupLocalVarDecl(*this, D);
 
@@ -437,6 +454,12 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
 
   llvm::GlobalVariable *var =
     cast<llvm::GlobalVariable>(addr->stripPointerCasts());
+
+  auto Ty = D.getType();
+  if (Ty->isAutoFPType() or (Ty->isArrayType() and cast<ArrayType>(Ty)->getElementType()->isAutoFPType())) {
+    auto &Ctx = getLLVMContext();
+    var->setMetadata("precision_range", CreateAutoFPMetadata(Ctx, D));
+  }
 
   // CUDA's local and local static __shared__ variables should not
   // have any non-empty initializers. This is ensured by Sema.
@@ -1443,7 +1466,6 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   assert(
       Ty.getAddressSpace() == LangAS::Default ||
       (Ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
-
   AutoVarEmission emission(D);
 
   bool isEscapingByRef = D.isEscapingByref();

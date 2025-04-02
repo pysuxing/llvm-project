@@ -72,6 +72,7 @@ namespace clang {
     TST_double,
     TST_float128,
     TST_ibm128,
+    TST_autofp,
     TST_bool,       // _Bool
     TST_decimal32,  // _Decimal32
     TST_decimal64,  // _Decimal64

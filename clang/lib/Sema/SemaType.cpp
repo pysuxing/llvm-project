@@ -1545,6 +1545,9 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         S.Diag(DS.getTypeSpecTypeLoc(), diag::ext_opencl_double_without_pragma);
     }
     break;
+  case DeclSpec::TST_autofp:
+    Result = Context.AutoFPTy;
+    break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
         !S.getLangOpts().SYCLIsDevice &&

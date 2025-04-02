@@ -3227,6 +3227,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "_Float16";
   case Float128:
     return "__float128";
+  case AutoFP:
+    return "__autofp";
   case Ibm128:
     return "__ibm128";
   case WChar_S:
