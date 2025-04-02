@@ -531,6 +531,8 @@ def FeatureCHK : SubtargetFeature<"chk", "HasCHK",
 def FeatureGCS : SubtargetFeature<"gcs", "HasGCS",
     "true", "Enable Armv9.4-A Guarded Call Stack Extension", [FeatureCHK]>;
 
+def FeatureFP128 : SubtargetFeature<"fp128", "HasFloat128", "false", "Enable FP128 Extension">;
+
 def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
     "true", "Enable Clear BHB instruction (FEAT_CLRBHB)">;
 
@@ -1366,6 +1368,9 @@ def ProcessorFeatures {
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES];
+  list<SubtargetFeature> FT  = [HasV8_2aOps, FeatureCRC, FeatureCrypto,
+                                FeatureFullFP16, FeatureFP128,
+                                FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1379,6 +1384,8 @@ def ProcessorFeatures {
 def : ProcessorModel<"generic", CortexA55Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
                       FeatureEnableSelectOptimize]>;
+def : ProcessorModel<"ft3000", CortexA57Model, ProcessorFeatures.FT,
+                     [TuneA57]>;
 def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
