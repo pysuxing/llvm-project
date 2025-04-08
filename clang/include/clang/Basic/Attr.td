@@ -4229,23 +4229,8 @@ def PrecisionRange : StmtAttr {
   let Documentation = [Undocumented];
 }
 
-def PrecisionAbsoluteError : StmtAttr {
-  let Spellings = [Pragma<"precision", "abserror">];
-  // let Subjects = SubjectList<[CompoundStmt], ErrorDiag,
-  //                            "'#pragma precision region' only applies to a compound statement">;
-  let Args = [IdentifierArgument<"variable">, ExprArgument<"bound">];
-  let Accessors = [];
-  let AdditionalMembers = [{
-    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const {
-      OS << getVariable() << '(' << getBound() << ')';
-    }
-  }];
-  // PLABFIXME the doc should be defined
-  let Documentation = [Undocumented];
-}
-
-def PrecisionRelativeError : StmtAttr {
-  let Spellings = [Pragma<"precision", "relerror">];
+def PrecisionError : StmtAttr {
+  let Spellings = [Pragma<"precision", "error">];
   // let Subjects = SubjectList<[CompoundStmt], ErrorDiag,
   //                            "'#pragma precision region' only applies to a compound statement">;
   let Args = [IdentifierArgument<"variable">, ExprArgument<"bound">];

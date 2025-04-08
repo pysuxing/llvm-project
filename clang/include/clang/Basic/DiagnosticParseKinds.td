@@ -1688,7 +1688,7 @@ def err_pragma_precision_expect_lparen : Error<"expected '('">;
 def err_pragma_precision_expect_rparen : Error<"expected ')'">;
 def err_pragma_precision_expect_tokenkind : Error<"expected %0">;
 def err_pragma_precision_expect_command : Error<
-  "expected precision command; supported commands are 'region', 'range', 'abserror', and 'relerror'">;
+  "expected precision command; supported commands are 'region', 'range', and 'error'">;
 def err_pragma_precision_expect_identifier : Error<
   "expected variable name">;
 def err_pragma_precision_expect_numerical : Error<

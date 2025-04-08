@@ -33,8 +33,10 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
+#include <sstream>
 
 using namespace clang;
 using namespace CodeGen;
@@ -714,7 +716,7 @@ static void emitPrecisionRange(CGBuilderTy &Builder, const PrecisionRangeAttr *a
   auto *Arg = llvm::MetadataAsValue::get(Ctx, llvm::MDNode::get(Ctx, ArgStrings));
   Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_range, Arg);
 }
-static void emitPrecisionError(CGBuilderTy &Builder, const PrecisionAbsoluteErrorAttr *attr) {
+static void emitPrecisionError(CGBuilderTy &Builder, const PrecisionErrorAttr *attr) {
   auto &Ctx = Builder.getContext();
   auto MDStrBuilder = [&Ctx](IdentifierInfo *ID) {
     return llvm::MDString::get(Ctx, ID->getName());
@@ -723,7 +725,12 @@ static void emitPrecisionError(CGBuilderTy &Builder, const PrecisionAbsoluteErro
   ArgStrings.push_back(MDStrBuilder(attr->getVariable()));
   auto Bound =
       cast<FloatingLiteral>(attr->getBound())->getValue().convertToDouble();
-  ArgStrings.push_back(llvm::MDString::get(Ctx, std::to_string(Bound)));
+  std::ostringstream OSS;
+  OSS.setf(std::ios::scientific);
+  OSS.precision(6);
+  OSS << Bound;
+  ArgStrings.push_back(llvm::MDString::get(Ctx, OSS.str()));
+  // ArgStrings.push_back(llvm::MDString::get(Ctx, std::to_string(Bound)));
   auto *Arg = llvm::MetadataAsValue::get(Ctx, llvm::MDNode::get(Ctx, ArgStrings));
   Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_error, Arg);
 }
@@ -747,12 +754,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     case attr::PrecisionRange:
       emitPrecisionRange(Builder, cast<PrecisionRangeAttr>(A));
       break;
-    case attr::PrecisionAbsoluteError:
-      emitPrecisionError(Builder, cast<PrecisionAbsoluteErrorAttr>(A));
+    case attr::PrecisionError:
+      emitPrecisionError(Builder, cast<PrecisionErrorAttr>(A));
       break;
-    // case attr::PrecisionRelativeError:
-    //   emitPrecisionError(Builder, cast<PrecisionRelativeErrorAttr>(A));
-    //   break;
     case attr::NoMerge:
       nomerge = true;
       break;

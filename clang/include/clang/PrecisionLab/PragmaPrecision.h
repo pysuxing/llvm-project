@@ -22,8 +22,7 @@ public:
   enum CommandKind {
     kRegion,
     kRange,
-    kAbsError,
-    kRelError,
+    kError,
     kInvalid,
   };
   static bool isSupportedType(tok::TokenKind Kind) {
@@ -46,8 +45,7 @@ public:
     return llvm::StringSwitch<CommandKind>(S)
         .Case("region", kRegion)
         .Case("range", kRange)
-        .Case("abserror", kAbsError)
-        .Case("relerror", kRelError)
+        .Case("error", kError)
         .Default(kInvalid);
   }
 public:

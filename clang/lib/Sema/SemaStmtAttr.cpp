@@ -501,10 +501,7 @@ static Attr *handlePrecisionErrorAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                       SourceRange Range) {
   IdentifierInfo *Var = A.getArgAsIdent(0)->Ident;
   Expr *Bound = A.getArgAsExpr(1);
-  bool IsAbs = A.getKind() == ParsedAttr::AT_PrecisionAbsoluteError;
-  if (IsAbs)
-    return PrecisionAbsoluteErrorAttr::CreateImplicit(S.Context, Var, Bound, A);
-  return PrecisionRelativeErrorAttr::CreateImplicit(S.Context, Var, Bound, A);
+  return PrecisionErrorAttr::CreateImplicit(S.Context, Var, Bound, A);
 }
 
 static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -557,8 +554,7 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handlePrecisionRegionAttr(S, St, A, Range);
   case ParsedAttr::AT_PrecisionRange:
     return handlePrecisionRangeAttr(S, St, A, Range);
-  case ParsedAttr::AT_PrecisionAbsoluteError:
-  case ParsedAttr::AT_PrecisionRelativeError:
+  case ParsedAttr::AT_PrecisionError:
     return handlePrecisionErrorAttr(S, St, A, Range);
   default:
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
