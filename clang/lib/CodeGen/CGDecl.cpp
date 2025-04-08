@@ -194,7 +194,7 @@ llvm::MDNode *CreateAutoFPMetadata(llvm::LLVMContext &Ctx, const VarDecl &D) {
   ArgStrings.push_back(llvm::MDString::get(Ctx, "__fp16"));
   ArgStrings.push_back(llvm::MDString::get(Ctx, "float"));
   ArgStrings.push_back(llvm::MDString::get(Ctx, "double"));
-  ArgStrings.push_back(llvm::MDString::get(Ctx, "long double"));
+  ArgStrings.push_back(llvm::MDString::get(Ctx, "__float128"));
   return llvm::MDNode::get(Ctx, ArgStrings);
 }
 /// EmitVarDecl - This method handles emission of any variable declaration
