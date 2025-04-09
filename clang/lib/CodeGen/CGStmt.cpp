@@ -757,7 +757,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
         if (MXPFPE) {
           auto *M = CI->getModule();
           auto *IntTy = Builder.getInt32Ty();
-          auto *Arg = Builder.getInt32((FE_DIVBYZERO|FE_INEXACT|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW));
+          auto *Arg = Builder.getInt32((FE_OVERFLOW | FE_UNDERFLOW));
           auto EnableFn = M->getOrInsertFunction("fpet_enable", IntTy, IntTy);
           Builder.CreateCall(EnableFn, Arg);
         }
