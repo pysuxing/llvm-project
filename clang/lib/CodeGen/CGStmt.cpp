@@ -37,6 +37,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 #include <sstream>
+#include <fenv.h>
 
 using namespace clang;
 using namespace CodeGen;
@@ -732,8 +733,11 @@ static void emitPrecisionError(CGBuilderTy &Builder, const PrecisionErrorAttr *a
   ArgStrings.push_back(llvm::MDString::get(Ctx, OSS.str()));
   // ArgStrings.push_back(llvm::MDString::get(Ctx, std::to_string(Bound)));
   auto *Arg = llvm::MetadataAsValue::get(Ctx, llvm::MDNode::get(Ctx, ArgStrings));
-  Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_error, Arg);
+  Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_error,
+                          Arg);
 }
+static llvm::cl::opt<bool> MXPFPE("mxpfpe", llvm::cl::init(false),
+                                  llvm::cl::desc("Enable FP Exception handling"));
 void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   bool nomerge = false;
   bool noinline = false;
@@ -746,10 +750,19 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
     default:
       break;
     case attr::PrecisionRegion:
-      assert(not hasPrecisionRegion);
-      Builder.CreateIntrinsic(Builder.getVoidTy(),
-                              llvm::Intrinsic::precision_region_start, {});
-      hasPrecisionRegion = true;
+      {
+        assert(not hasPrecisionRegion);
+        auto *CI = Builder.CreateIntrinsic(
+            Builder.getVoidTy(), llvm::Intrinsic::precision_region_start, {});
+        if (MXPFPE) {
+          auto *M = CI->getModule();
+          auto *IntTy = Builder.getInt32Ty();
+          auto *Arg = Builder.getInt32((FE_DIVBYZERO|FE_INEXACT|FE_INVALID|FE_OVERFLOW|FE_UNDERFLOW));
+          auto EnableFn = M->getOrInsertFunction("fpet_enable", IntTy, IntTy);
+          Builder.CreateCall(EnableFn, Arg);
+        }
+        hasPrecisionRegion = true;
+      }
       break;
     case attr::PrecisionRange:
       emitPrecisionRange(Builder, cast<PrecisionRangeAttr>(A));
@@ -778,8 +791,16 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_alwaysinline(InAlwaysInlineAttributedStmt, alwaysinline);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   EmitStmt(S.getSubStmt(), S.getAttrs());
-  if (hasPrecisionRegion)
-    Builder.CreateIntrinsic(Builder.getVoidTy(), llvm::Intrinsic::precision_region_end, {});
+  if (hasPrecisionRegion) {
+    auto *CI = Builder.CreateIntrinsic(
+        Builder.getVoidTy(), llvm::Intrinsic::precision_region_end, {});
+    if (MXPFPE) {
+      auto *M = CI->getModule();
+      auto *IntTy = Builder.getInt32Ty();
+      auto DisableFn = M->getOrInsertFunction("fpet_disable", IntTy);
+      Builder.CreateCall(DisableFn);
+    }
+  }
 }
 
 void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
