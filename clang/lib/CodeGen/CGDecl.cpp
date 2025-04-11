@@ -222,7 +222,7 @@ void CodeGenFunction::EmitVarDecl(const VarDecl &D) {
     return EmitStaticVarDecl(D, Linkage);
   }
 
-  auto Ty = D.getType();
+  auto Ty = D.getType().getCanonicalType();
   if (Ty->isAutoFPType() or (Ty->isArrayType() and cast<ArrayType>(Ty)->getElementType()->isAutoFPType())) {
     auto &Ctx = Builder.getContext();
     auto *Arg = llvm::MetadataAsValue::get(Ctx, CreateAutoFPMetadata(Ctx, D));
@@ -455,7 +455,7 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   llvm::GlobalVariable *var =
     cast<llvm::GlobalVariable>(addr->stripPointerCasts());
 
-  auto Ty = D.getType();
+  auto Ty = D.getType().getCanonicalType();
   if (Ty->isAutoFPType() or (Ty->isArrayType() and cast<ArrayType>(Ty)->getElementType()->isAutoFPType())) {
     auto &Ctx = getLLVMContext();
     var->setMetadata("precision_range", CreateAutoFPMetadata(Ctx, D));

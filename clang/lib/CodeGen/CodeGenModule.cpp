@@ -4794,7 +4794,7 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
         *this, GV, DAddrSpace, ExpectedAS, Ty->getPointerTo(TargetAS));
   }
   if (D) {
-    auto Ty = D->getType();
+    auto Ty = D->getType().getCanonicalType();
     if (Ty->isAutoFPType() or (Ty->isArrayType() and cast<ArrayType>(Ty)->getElementType()->isAutoFPType())) {
       auto &Ctx = getLLVMContext();
       GV->setMetadata("precision_range", CreateAutoFPMetadata(Ctx, *D));

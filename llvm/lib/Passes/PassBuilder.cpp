@@ -260,6 +260,9 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
+#include "llvm/Transforms/MXP/MPTune.h"
+#include "llvm/Transforms/MXP/BF16CastPass.h"
+#include "llvm/Transforms/MXP/FP128ToDDPass.h"
 #include <optional>
 
 using namespace llvm;
