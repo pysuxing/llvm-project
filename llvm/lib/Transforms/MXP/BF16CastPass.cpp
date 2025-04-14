@@ -15,7 +15,7 @@
 template <typename T>
 inline void BF16CastPass::ChangeInstToCall(T *I, const std::string &FunctionName, const std::vector<Value*> &Args, Type *ReturnType) {
     Instruction *Inst = dyn_cast<Instruction>(I);
-    errs() << "Instruction : " << *Inst << "\n";
+    ////errs() << "Instruction : " << *Inst << "\n";
     Module *M = Inst->getModule();
     IRBuilder<> Builder(I);
 
@@ -23,7 +23,7 @@ inline void BF16CastPass::ChangeInstToCall(T *I, const std::string &FunctionName
     if (!(dyn_cast<StoreInst>(I))) {
         for (unsigned i = 0; i < Args.size(); i++) {
             auto *arg = Inst->getOperand(i);
-	    errs() << "Old operand " << i << " : " << *arg << "\n";
+	    //errs() << "Old operand " << i << " : " << *arg << "\n";
 	    auto *constant = dyn_cast<Constant>(arg);
             if ( constant && arg->getType()->isFP128Ty()) {//如果函数参数中有fp128常量，先转成dd
                 Function *FP128ToDD = M->getFunction("FP128ToDD");
@@ -34,14 +34,14 @@ inline void BF16CastPass::ChangeInstToCall(T *I, const std::string &FunctionName
                 }
                 AllocaInst *alloca = Builder.CreateAlloca(constant->getType());
                 Value *callResult = Builder.CreateCall(FP128ToDD, {constant, alloca});
-		errs() << "New Alloca : " << *alloca << "\n";
-		errs() << "New trunCall : " << *callResult << "\n";
+		//errs() << "New Alloca : " << *alloca << "\n";
+		//errs() << "New trunCall : " << *callResult << "\n";
 
 		LoadInst *load = Builder.CreateLoad(arg->getType(), alloca);	
-		errs() << "Load : " << *load << "\n";
+		//errs() << "Load : " << *load << "\n";
 		newArgs.push_back(load);
                 //Inst->setOperand(i, alloca);
-    		//errs() << "Instruction : " << *Inst << "\n";
+    		////errs() << "Instruction : " << *Inst << "\n";
             } else {
 	    	newArgs.push_back(arg);
 	    }
@@ -60,7 +60,7 @@ inline void BF16CastPass::ChangeInstToCall(T *I, const std::string &FunctionName
     	Callee = Function::Create(FuncTy, Function::ExternalLinkage, FunctionName, M);
     }
     //Function *Callee = getOrCreateFunction(M, FunctionName, Args, ReturnType);
-    errs() << "New Function : " << *Callee << "\n";
+    //errs() << "New Function : " << *Callee << "\n";
 
     //CallInst *Call = Builder.CreateCall(Callee, Args);
     CallInst *Call = Builder.CreateCall(Callee, newArgs);
@@ -79,9 +79,9 @@ bool BF16CastPass::runOnModule(Module &M) {
 			//Type *DstType = CI->getType();
 			Type *SrcType = CI->getSrcTy();
 			Type *DstType = CI->getDestTy();
-			errs() << "Cast Instruction : " << I << "\n";
-			errs() << "Src Type : " << *SrcType << "\n";
-			errs() << "Dst Type : " << *DstType << "\n";
+			//errs() << "Cast Instruction : " << I << "\n";
+			//errs() << "Src Type : " << *SrcType << "\n";
+			//errs() << "Dst Type : " << *DstType << "\n";
 
 			switch(CI->getOpcode()) {
 				case Instruction::FPTrunc:
@@ -92,7 +92,7 @@ bool BF16CastPass::runOnModule(Module &M) {
 					} else if (SrcType->isFP128Ty() && DstType->isBFloatTy()) {
 						CT1(CI, "FP128ToBF16");
 					} else {
-						errs() << "Don't neet to change.\n";
+						//errs() << "Don't neet to change.\n";
 					}
 					break;
 
@@ -104,7 +104,7 @@ bool BF16CastPass::runOnModule(Module &M) {
 					} else if (SrcType->isBFloatTy() && DstType->isFP128Ty()) {
 						CT1(CI, "BF16ToFP128");
 					} else {
-						errs() << "Don't neet to change.\n";
+						//errs() << "Don't neet to change.\n";
 					}
 					break;
 
@@ -115,7 +115,7 @@ bool BF16CastPass::runOnModule(Module &M) {
 			}	
 		}
 
-	        errs() << " BB : " << BB << "\n";
+	        //errs() << " BB : " << BB << "\n";
             }
         }
     }
@@ -125,12 +125,12 @@ bool BF16CastPass::runOnModule(Module &M) {
     }
     erase.clear();
 
-    errs() << "END M : \n" << M << "\n";
+    //errs() << "END M : \n" << M << "\n";
     return true;
 }
 
 PreservedAnalyses BF16CastPass::run(Module &M, ModuleAnalysisManager &) {
-    errs() << ">>> Perci-Tuner: Running BF16Cast Pass...\n";
+    //errs() << ">>> Perci-Tuner: Running BF16Cast Pass...\n";
     if (!runOnModule(M))
         return PreservedAnalyses::all();
     return PreservedAnalyses::none();

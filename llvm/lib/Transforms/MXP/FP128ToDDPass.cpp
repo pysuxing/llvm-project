@@ -20,7 +20,7 @@ template <typename T>
 inline void FP128ToDDPass::ChangeInstToCall(T *I, const std::string &FunctionName, const std::vector<Value*> &Args, Type *ReturnType) {
     Instruction *Inst = dyn_cast<Instruction>(I);
 #ifdef DEBUG
-    errs() << "Instruction : " << *Inst << "\n";
+    //errs() << "Instruction : " << *Inst << "\n";
 #endif
     Module *M = Inst->getModule();
     IRBuilder<> Builder(I);
@@ -30,7 +30,7 @@ inline void FP128ToDDPass::ChangeInstToCall(T *I, const std::string &FunctionNam
         for (unsigned i = 0; i < Args.size(); i++) {
             auto *arg = Inst->getOperand(i);
 #ifdef DEBUG
-	    errs() << "Old operand " << i << " : " << *arg << "\n";
+	    //errs() << "Old operand " << i << " : " << *arg << "\n";
 #endif
 	    auto *constant = dyn_cast<Constant>(arg);
             if ( constant && arg->getType()->isFP128Ty()) {//如果函数参数中有fp128常量，先转成dd
@@ -43,16 +43,16 @@ inline void FP128ToDDPass::ChangeInstToCall(T *I, const std::string &FunctionNam
                 AllocaInst *alloca = Builder.CreateAlloca(constant->getType());
                 Value *callResult = Builder.CreateCall(FP128ToDD, {constant, alloca});
 #ifdef DEBUG
-		errs() << "New Alloca : " << *alloca << "\n";
-		errs() << "New trunCall : " << *callResult << "\n";
+		//errs() << "New Alloca : " << *alloca << "\n";
+		//errs() << "New trunCall : " << *callResult << "\n";
 #endif
 		LoadInst *load = Builder.CreateLoad(arg->getType(), alloca);	
 #ifdef DEBUG
-		errs() << "Load : " << *load << "\n";
+		//errs() << "Load : " << *load << "\n";
 #endif
 		newArgs.push_back(load);
                 //Inst->setOperand(i, alloca);
-    		//errs() << "Instruction : " << *Inst << "\n";
+    		////errs() << "Instruction : " << *Inst << "\n";
             } else {
 	    	newArgs.push_back(arg);
 	    }
@@ -72,7 +72,7 @@ inline void FP128ToDDPass::ChangeInstToCall(T *I, const std::string &FunctionNam
     }
     //Function *Callee = getOrCreateFunction(M, FunctionName, Args, ReturnType);
 #ifdef DEBUG
-    errs() << "New Function : " << *Callee << "\n";
+    //errs() << "New Function : " << *Callee << "\n";
 #endif
     //CallInst *Call = Builder.CreateCall(Callee, Args);
     CallInst *Call = Builder.CreateCall(Callee, newArgs);
@@ -93,24 +93,24 @@ inline std::string getBOName(BinaryOperator *bo) {
 		case Instruction::FDiv:
 			return "fp128_div";
 		default:
-			//errs() << "orther Binary Operator " << *bo << ".\n";
+			////errs() << "orther Binary Operator " << *bo << ".\n";
 			return "";
 	}
 }
 
 //template <typename T>
 //inline void getFuncByI(T *I, string s) {
-//    errs() << "s : " << s.c_str() << "\n";
+//    //errs() << "s : " << s.c_str() << "\n";
 //    IRBuilder<> Builder(I);
 //    Function *Func = Builder.GetInsertBlock()->getModule()->getFunction(s);
-//    errs() << "Func : " << Func << " from " << *I << "\n";
-//    errs() << "O0 : " << *(I->getOperand(0)) << "\n";
-//    errs() << "O1 : " << *(I->getOperand(1)) << "\n";
+//    //errs() << "Func : " << Func << " from " << *I << "\n";
+//    //errs() << "O0 : " << *(I->getOperand(0)) << "\n";
+//    //errs() << "O1 : " << *(I->getOperand(1)) << "\n";
 //    if (!Func) {
 //        Func = Function::Create(
 //        FunctionType::get(I->getType(), {I->getType(), I->getType()}, false),
 //        Function::ExternalLinkage, s, Builder.GetInsertBlock()->getModule());
-//        errs() << "new Func : " << Func << "\n";
+//        //errs() << "new Func : " << Func << "\n";
 //    }
 //
 //    // Create the function call
@@ -131,16 +131,16 @@ bool FP128ToDDPass::runOnModule(Module &M) {
                         // Get the fp128 constant
                         auto *FP128Const = dyn_cast<ConstantFP>(SI->getValueOperand());
                         if (!FP128Const) continue;
-			//errs() << "const fp128 store : " << *SI << "\n";
-			//errs() << "Op0 : " << *(SI->getValueOperand()) << "\n";
-			//errs() << "Op1 : " << *(SI->getPointerOperand()) << "\n";
+			////errs() << "const fp128 store : " << *SI << "\n";
+			////errs() << "Op0 : " << *(SI->getValueOperand()) << "\n";
+			////errs() << "Op1 : " << *(SI->getPointerOperand()) << "\n";
 			ChangeInstToCall(SI, "FP128ToDD", {SI->getValueOperand(), SI->getPointerOperand()}, SI->getType());
             
                         //// Convert fp128 to double
                         //APFloat fp128Val(FP128Const->getValueAPF());
                         //if (fp128Val.isNaN() || fp128Val.isInfinity()) {
                         //    // 处理异常情况
-                        //    errs() << "fp128 constant get error\n";
+                        //    //errs() << "fp128 constant get error\n";
                         //    return false;
                         //}
                         //APFloat doubleVal(fp128Val);
@@ -202,14 +202,14 @@ bool FP128ToDDPass::runOnModule(Module &M) {
                     	}
 		    }
                 } else if (auto *FCall = dyn_cast<CallInst>(&I)) { //处理函数调用
-		    //errs() << "Call I : " << *FCall << "\n";	
+		    ////errs() << "Call I : " << *FCall << "\n";	
 		    auto *Callee = FCall->getCalledFunction();
 		    if (Callee) {
 		    	if (Callee->getReturnType()->isFP128Ty()) {
-			    //errs() << "FP128 Call : " << I << "\n";
+			    ////errs() << "FP128 Call : " << I << "\n";
 			    if (Callee->getName() == "llvm.fmuladd.f128") {
 #ifdef DEBUG
-			    	errs() << "This call (" << I << ") need to deal." << "\n"; 
+			    	//errs() << "This call (" << I << ") need to deal." << "\n"; 
 #endif
 		    		std::string funName = "fp128_muladd";
 		    		for (unsigned i = 0; i < FCall->getNumOperands(); ++i) {
@@ -232,21 +232,21 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 			}
 			if (Callee->getName() == "printf" && Callee->getFunctionType()->isVarArg()) {
 #ifdef DEBUG
-				errs() << "Call printf\n";
+				//errs() << "Call printf\n";
 #endif
 				//FunctionType *FT = Callee->getFunctionType();
-				//errs() << "Call type : " << *FT << "\n";
-				//errs() << "Call param num : " << FT->getNumParams() << "\n";
-				//errs() << "Call num : " << FCall->getNumOperands() << "\n";
+				////errs() << "Call type : " << *FT << "\n";
+				////errs() << "Call param num : " << FT->getNumParams() << "\n";
+				////errs() << "Call num : " << FCall->getNumOperands() << "\n";
 				//bool hasFP128Pa = false;
 				for(unsigned i = 0; i < FCall->getNumOperands(); ++i) {
 					auto *pa = FCall->getOperand(i);
 #ifdef DEBUG
-					errs() << "printf param : " << *pa << "\n";
+					//errs() << "printf param : " << *pa << "\n";
 #endif
-					//errs() << "This printf : " << *FCall << " need to deal.\n";
+					////errs() << "This printf : " << *FCall << " need to deal.\n";
 					if (pa->getType()->isFP128Ty()) {
-						//errs() << "fp128\n";
+						////errs() << "fp128\n";
 						IRBuilder<> Builder(&I);
 #if 0
 						Function *Fun = M.getFunction("DDToFP128");
@@ -277,15 +277,15 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 
 						//ChangeInstToCall(FCall, "DDToFP128", {I->getOperand(0)}, I->getType());
 						//if (auto *ap = dyn_cast<Instruction>(pa)) {
-						//	errs() << "ap : " << *ap << "\n";
+						//	//errs() << "ap : " << *ap << "\n";
 						//	auto *t = dyn_cast<Instruction>(ap->getOperand(0));
-						//	//errs() << "op(0) : " << *(ap->getOperand(0)) << "\n";
-						//	errs() << "op(0) : " << *(t-getType()) << "\n";
+						//	////errs() << "op(0) : " << *(ap->getOperand(0)) << "\n";
+						//	//errs() << "op(0) : " << *(t-getType()) << "\n";
 						//}
 						//hasFP128Pa = true;
 						break;
 					} else if (pa->getType()->isDoubleTy()) {
-						//errs() << "fp64\n";
+						////errs() << "fp64\n";
 						//IRBuilder<> Builder(&I);
 						//Function *Fun = M.getFunction("fp128_printd");
 						//if (!Fun) {
@@ -295,8 +295,8 @@ bool FP128ToDDPass::runOnModule(Module &M) {
                                                 //}
 
 						//auto *newPa = Builder.CreateCall(Fun, pa);
-						//errs() << "old I : " << I << "\n";
-						//errs() << "new func : " << *newPa << "\n";
+						////errs() << "old I : " << I << "\n";
+						////errs() << "new func : " << *newPa << "\n";
                                                 //newPa->setDebugLoc(I.getDebugLoc());
 
                                                 //I.replaceAllUsesWith(newPa);
@@ -304,7 +304,7 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 
 						//break;
 					} else if (pa->getType()->isFloatTy()) {
-						//errs() << "fp32\n";
+						////errs() << "fp32\n";
 						//IRBuilder<> Builder(&I);
                                                 //Function *Fun = M.getFunction("fp128_printf");
                                                 //if (!Fun) {
@@ -323,7 +323,7 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 					}
 				}
 				//if (hasFP128Pa) {
-				//	errs() << "This printf : " << *FCall << " need to deal.\n";
+				//	//errs() << "This printf : " << *FCall << " need to deal.\n";
 				//	
 				//}
 			}
@@ -334,9 +334,9 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 			Type *SrcType = CI->getSrcTy();
 			Type *DstType = CI->getDestTy();
 #ifdef DEBUG
-			errs() << "Cast Instruction : " << I << "\n";
-			errs() << "Src Type : " << *SrcType << "\n";
-			errs() << "Dst Type : " << *DstType << "\n";
+			//errs() << "Cast Instruction : " << I << "\n";
+			//errs() << "Src Type : " << *SrcType << "\n";
+			//errs() << "Dst Type : " << *DstType << "\n";
 #endif
 			switch(CI->getOpcode()) {
 				case Instruction::FPTrunc:
@@ -349,7 +349,7 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 					} else if (SrcType->isDoubleTy() && DstType->isBFloatTy()) {
 						CT1(CI, "FP64ToBF16");
 					}*/ else {
-						//errs() << "Don't neet to change.\n";
+						////errs() << "Don't neet to change.\n";
 					}
 					break;
 
@@ -363,7 +363,7 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 					} else if (SrcType->isBFloatTy() && DstType->isDoubleTy()) {
 						CT1(CI, "BF16ToFP64");
 					} */else {
-						//errs() << "Don't neet to change.\n";
+						////errs() << "Don't neet to change.\n";
 					}
 					break;
 
@@ -426,7 +426,7 @@ bool FP128ToDDPass::runOnModule(Module &M) {
 			}	
 		}
 #ifdef DEBUG
-	        errs() << " BB : " << BB << "\n";
+	        //errs() << " BB : " << BB << "\n";
 #endif
             }
         }
@@ -437,14 +437,14 @@ bool FP128ToDDPass::runOnModule(Module &M) {
     }
     erase.clear();
 #ifdef DEBUG
-    errs() << "END M : \n" << M << "\n";
+    //errs() << "END M : \n" << M << "\n";
 #endif
     return true;
 }
 
 PreservedAnalyses FP128ToDDPass::run(Module &M, ModuleAnalysisManager &) {
 #ifdef DEBUG
-    errs() << ">>> Perci-Tuner: Running FP128ToDD Pass...\n";
+    //errs() << ">>> Perci-Tuner: Running FP128ToDD Pass...\n";
 #endif
     if (!runOnModule(M))
         return PreservedAnalyses::all();
