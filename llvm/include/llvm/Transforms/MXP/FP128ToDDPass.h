@@ -14,15 +14,24 @@ using namespace std;
 using namespace llvm;
 
 namespace llvm {
-    class FP128ToDDPass : public PassInfoMixin<FP128ToDDPass> {
-    public:
-        PreservedAnalyses run(Module &module, ModuleAnalysisManager &); // for New Pass Manager
-        virtual bool runOnModule(Module &module);
-    private:
-	template <typename T> void ChangeInstToCall(T *I, const std::string &FunctionName, const std::vector<Value*> &Args, Type *ReturnType);
-	vector<Instruction*> erase;
-    };
-    
+
+extern cl::opt<bool> EnableFP128ToDD;
+
+class FP128ToDDPass : public PassInfoMixin<FP128ToDDPass> {
+public:
+  PreservedAnalyses run(Module &module,
+                        ModuleAnalysisManager &); // for New Pass Manager
+  virtual bool runOnModule(Module &module);
+
+private:
+  template <typename T>
+  void ChangeInstToCall(T *I, const std::string &FunctionName,
+                        const std::vector<Value *> &Args, Type *ReturnType);
+  vector<Instruction *> erase;
+};
+
+void addFP128ToDDPass(ModulePassManager &MPM, OptimizationLevel Level);
+
 } // namespace llvm
 
 #endif // FP128_TO_DD_PASS_H

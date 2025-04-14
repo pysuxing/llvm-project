@@ -79,6 +79,8 @@
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include "llvm/Transforms/MXP/BF16CastPass.h"
+#include "llvm/Transforms/MXP/FP128ToDDPass.h"
 #include <memory>
 #include <optional>
 using namespace clang;
@@ -854,6 +856,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC);
 
+  if (EnableBF16ToFP32)
+    PB.registerPipelineStartEPCallback(addBF16ToFP32Pass);
+  if (EnableFP128ToDD) {
+    PB.registerPipelineStartEPCallback(addFP128ToDDPass);
+  }
   // Handle the assignment tracking feature options.
   switch (CodeGenOpts.getAssignmentTrackingMode()) {
   case CodeGenOptions::AssignmentTrackingOpts::Forced:

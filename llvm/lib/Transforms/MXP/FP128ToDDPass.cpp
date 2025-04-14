@@ -450,3 +450,13 @@ PreservedAnalyses FP128ToDDPass::run(Module &M, ModuleAnalysisManager &) {
         return PreservedAnalyses::all();
     return PreservedAnalyses::none();
 }
+
+namespace llvm {
+	cl::opt<bool>
+			EnableFP128ToDD("fp128todd",
+											cl::desc("Convert fp128 ops to double-double ops"),
+											cl::init(false));
+void addFP128ToDDPass(ModulePassManager &MPM, OptimizationLevel Level) {
+  MPM.addPass(FP128ToDDPass());
+}
+} // namespace llvm

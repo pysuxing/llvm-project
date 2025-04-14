@@ -15,6 +15,7 @@ set(LLVM_LINK_COMPONENTS
   IRPrinter
   IRReader
   InstCombine
+  MXP
   Instrumentation
   LTO
   Linker

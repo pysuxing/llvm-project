@@ -135,3 +135,13 @@ PreservedAnalyses BF16CastPass::run(Module &M, ModuleAnalysisManager &) {
         return PreservedAnalyses::all();
     return PreservedAnalyses::none();
 }
+
+namespace llvm {
+    cl::opt<bool> EnableBF16ToFP32("bf16tofp32",
+                               cl::desc("Convert bf16 ops to fp32 ops"),
+                               cl::init(false));
+
+void addBF16ToFP32Pass(ModulePassManager &MPM, OptimizationLevel Level) {
+  MPM.addPass(BF16CastPass());
+}
+} // namespace llvm
