@@ -1368,7 +1368,7 @@ def ProcessorFeatures {
                                      FeatureMTE, FeatureSSBS, FeatureRandGen,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES];
-  list<SubtargetFeature> FT  = [HasV8_2aOps, FeatureCRC, FeatureCrypto,
+  list<SubtargetFeature> FT  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
                                 FeatureFullFP16, FeatureDouble2,
                                 FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
 

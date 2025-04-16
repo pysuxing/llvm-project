@@ -545,7 +545,7 @@ inline constexpr CpuInfo CpuInfos[] = {
      (AArch64::AEK_FP16 | AArch64::AEK_RAND | AArch64::AEK_SM4 |
       AArch64::AEK_SHA3 | AArch64::AEK_SHA2 | AArch64::AEK_AES |
       AArch64::AEK_MTE | AArch64::AEK_SB | AArch64::AEK_SSBS)},
-    {"ft3000", ARMV8_2A,
+    {"ft3000", ARMV8A,
      (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_CRC |
       AArch64::AEK_FP16 | AEK_DOUBLE2)},
 };
