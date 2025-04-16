@@ -935,6 +935,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasRCPC3 = true;
     if (Feature == "+double2")
       HasIbm128 = true;
+    if (Feature == "+fp128")
+      HasFloat128 = true;
   }
 
   // Check features that are manually disabled by command line options.

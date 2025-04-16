@@ -531,6 +531,7 @@ def FeatureCHK : SubtargetFeature<"chk", "HasCHK",
 def FeatureGCS : SubtargetFeature<"gcs", "HasGCS",
     "true", "Enable Armv9.4-A Guarded Call Stack Extension", [FeatureCHK]>;
 
+def FeatureFP128 : SubtargetFeature<"fp128", "HasFloat128", "false", "Enable FP128 Extension">;
 def FeatureDouble2 : SubtargetFeature<"double2", "HasIbm128", "false", "Enable double2 Extension">;
 
 def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
@@ -1369,7 +1370,7 @@ def ProcessorFeatures {
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES];
   list<SubtargetFeature> FT  = [HasV8_0aOps, FeatureCRC, FeatureCrypto,
-                                FeatureFullFP16, FeatureDouble2,
+                                FeatureFullFP16, FeatureBF16, FeatureFP128, FeatureDouble2,
                                 FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them

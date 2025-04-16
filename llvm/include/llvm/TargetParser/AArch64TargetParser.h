@@ -88,6 +88,7 @@ enum CPUFeatures {
   FEAT_SME_I64,
   FEAT_SME2,
   FEAT_DOUBLE2,
+  FEAT_FP128,
   FEAT_MAX
 };
 
@@ -155,7 +156,8 @@ enum ArchExtKind : uint64_t {
   AEK_RASv2 =       1ULL << 54, // FEAT_RASv2
   AEK_ITE =         1ULL << 55, // FEAT_ITE
   AEK_GCS =         1ULL << 56, // FEAT_GCS
-  AEK_DOUBLE2 =     1ULL << 57, // FEAT_DOUBLE2
+  AEK_FP128   =     1ULL << 57, // FEAT_FP128
+  AEK_DOUBLE2 =     1ULL << 58, // FEAT_DOUBLE2
 };
 // clang-format on
 
@@ -263,6 +265,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"wfxt", AArch64::AEK_NONE, {}, {}, FEAT_WFXT, "+wfxt", 550},
     {"gcs", AArch64::AEK_GCS, "+gcs", "-gcs", FEAT_MAX, "", 0},
     {"double2", AArch64::AEK_DOUBLE2, "+double2", "-double2", FEAT_DOUBLE2, "", 0},
+    {"fp128", AArch64::AEK_DOUBLE2, "+fp128", "-fp128", FEAT_FP128, "", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_MAX, "", ExtensionInfo::MaxFMVPriority},
 };
@@ -547,7 +550,7 @@ inline constexpr CpuInfo CpuInfos[] = {
       AArch64::AEK_MTE | AArch64::AEK_SB | AArch64::AEK_SSBS)},
     {"ft3000", ARMV8A,
      (AArch64::AEK_AES | AArch64::AEK_SHA2 | AArch64::AEK_CRC |
-      AArch64::AEK_FP16 | AEK_DOUBLE2)},
+      AArch64::AEK_FP16 | AEK_BF16 | AEK_DOUBLE2 | AEK_FP128)},
 };
 
 // An alias for a CPU.
